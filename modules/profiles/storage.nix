@@ -6,15 +6,25 @@ in
   options.homelab.storage.enable = lib.mkEnableOption "ZFS bulk storage + snapshots";
 
   config = lib.mkIf cfg.enable {
-    # ZFS notes for a single box:
-    #  - A single-disk pool gives you checksums and snapshots but NOT redundancy.
-    #    Bit rot gets *detected*, not repaired. Two disks in a mirror is the
-    #    first configuration worth calling storage.
+    # ZFS notes for a two-disk box:
+    #  - You have two disks and need one of them for root. That means a mirror
+    #    of your data is not available without a third disk. A single-disk pool
+    #    still gives you checksums, snapshots, and compression — bit rot gets
+    #    *detected*, just not repaired.
+    #  - So: disk 1 = boot + root + nix store, disk 2 = single-vdev data pool,
+    #    and offsite restic backups are doing the redundancy job that a mirror
+    #    would otherwise do. Add a third disk later and `zpool attach` turns
+    #    the data pool into a mirror with no downtime and no rebuild.
     #  - ECC RAM is nice, not required. The "ZFS eats data without ECC" thing is
     #    folklore; ZFS is no worse than any other filesystem there.
-    #  - Budget ~1GB RAM per TB for comfortable ARC behaviour.
     boot.supportedFilesystems = [ "zfs" ];
     boot.zfs.forceImportRoot = false;
+
+    # ZFS defaults its ARC cache to half of RAM. On 32GB that's 16GB it will
+    # happily take and only grudgingly give back — which is exactly the memory
+    # Ollama wants when a model spills out of the 6750 XT's 12GB of VRAM.
+    # Cap it at 8GB; still plenty of cache for a home NAS.
+    boot.kernelParams = [ "zfs.zfs_arc_max=8589934592" ];
 
     services.zfs = {
       autoScrub = {

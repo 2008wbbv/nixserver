@@ -60,8 +60,16 @@
   # --- Tier 3: the spicy tier ------------------------------------------------
   homelab.downloads.enable = false; # torrent, VPN-confined. Needs a WG config.
   homelab.anonymity.enable = false; # Tor + I2P
-  homelab.llm.enable = false; # Ollama + Open WebUI (needs amdgpu below)
-  homelab.amdgpu.enable = false; # TODO: set your card's gfx target first
+  homelab.maps.enable = false; # offline OSM basemap + viewer
+  homelab.llm.enable = false; # Ollama + Open WebUI
+
+  # RX 6750 XT: RDNA2, gfx1031. ROCm ships support for gfx1030 (RDNA2 "big
+  # navi") but not 1031, so we tell it to pretend. This is the standard,
+  # well-trodden fix for 6700/6750-class cards — not a hack that might break.
+  homelab.amdgpu = {
+    enable = true;
+    gfxVersion = "10.3.0";
+  };
 
   # --- Tier 4: hardware you don't own yet ------------------------------------
   homelab.printer.enable = false; # Klipper over USB, no printer NIC

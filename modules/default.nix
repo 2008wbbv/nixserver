@@ -20,6 +20,7 @@
     ./services/knowledge.nix
     ./services/downloads.nix
     ./services/anonymity.nix
+    ./services/maps.nix
     ./services/llm.nix
     ./services/comms.nix
     ./services/printer.nix

@@ -52,18 +52,31 @@ in
     users.groups.video = { };
 
     #########################################################################
+    # RX 6750 XT specifics (RDNA2 / gfx1031 / 12GB):
+    #
+    # Transcode (VCN 3.0), for Jellyfin:
+    #   H.264   decode + encode
+    #   HEVC    decode + encode
+    #   AV1     decode only — RDNA2 cannot encode AV1. That landed with
+    #           RDNA3 (7000-series). If Jellyfin looks like it's offering
+    #           AV1 encode, don't enable it; you'll get silent CPU fallback.
+    #
+    # Compute (ROCm), for Ollama:
+    #   12GB VRAM is a comfortable 8B-at-Q4 card and a workable 14B-at-Q4 one.
+    #   A 32B model at Q4 needs ~18GB and will spill to system RAM, where it
+    #   runs at single-digit tokens/sec. Stay at or under 14B for GPU-resident
+    #   speed.
+    #
     # Contention warning:
+    #   Both of the above share those same 12GB. An 8B model resident is ~5GB;
+    #   Ollama holds it for `keep_alive` after the last request. A 4K transcode
+    #   starting during that will fight it.
     #
-    # Jellyfin transcoding and Ollama inference share one card and, more
-    # importantly, one pool of VRAM. A 7B model at Q4 wants ~5GB resident;
-    # Ollama holds it for `keep_alive` after the last request. If someone
-    # starts a 4K transcode while a model is loaded, one of them fails.
-    #
-    # Mitigations, cheapest first:
-    #   - OLLAMA_KEEP_ALIVE short (set in llm.nix) so VRAM frees up quickly
-    #   - Pre-transcode your library so Jellyfin direct-plays and never needs
-    #     the GPU at all — this is the real fix
-    #   - Second GPU eventually; even an old one is fine for VAAPI
+    #   Mitigations, cheapest first:
+    #     - short OLLAMA_KEEP_ALIVE (set in llm.nix) so VRAM frees quickly
+    #     - pre-transcode your library so Jellyfin direct-plays and never
+    #       touches the GPU — this is the real fix
+    #     - a second cheap GPU for VAAPI later; even a very old one works
     #########################################################################
   };
 }

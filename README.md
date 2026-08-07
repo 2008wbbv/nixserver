@@ -63,7 +63,7 @@ the router approach never would.
 before you put anything in Vaultwarden you can't afford to lose.
 
 **Tier 3 — the rest.**
-`downloads`, `anonymity`, `llm`, `amdgpu`. Verify the VPN namespace actually
+`downloads`, `anonymity`, `maps`, `llm`. Verify the VPN namespace actually
 confines traffic (commands are in `modules/services/downloads.nix`) before
 you use it for anything.
 
@@ -99,14 +99,28 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
 - **The 3D printer is air-gapped by USB, not by VLAN.** Klipper's split
   architecture means the printer mainboard has no network interface in play
   at all. Stronger than the VLAN plan, and available today.
+- **Maps, not TAK.** A single Protomaps `.pmtiles` file served as a static
+  file, read directly by MapLibre in the browser. No PostGIS, no osm2pgsql,
+  no renderer, no tile cache — and it works with the internet unplugged.
 - **Email is deferred** by your call — it's the one item that can eat a whole
   weekend on its own. Nothing here blocks adding it later.
 - **Matrix federation is off**, because federating contradicts "nothing
   public". See the note in `modules/services/comms.nix` for the three ways out.
 
-## Open questions
+## Hardware
 
-Still unresolved from the original list:
+| | |
+|---|---|
+| GPU | RX 6750 XT — RDNA2, gfx1031, 12GB. ROCm needs `HSA_OVERRIDE_GFX_VERSION=10.3.0`, wired up in `profiles/amdgpu.nix`. H.264/HEVC encode; **no AV1 encode** (RDNA3+ only). |
+| RAM | 33GB. ZFS ARC capped at 8GB so it doesn't fight Ollama for what spills out of VRAM. |
+| Disks | 2. One for root, one for a single-vdev data pool — a mirror needs a third disk. Backups are carrying the redundancy load until then. |
+| Boot | Currently dual-boots Windows. `disks.nix` is destructive and stays unimported until that's resolved. |
+
+Model sizing for 12GB: 8B at Q4 (~5GB) and 14B at Q4 (~9GB) stay GPU-resident.
+32B needs ~18GB and will spill to system RAM, where it drops to single-digit
+tokens/sec.
+
+## Open questions
 
 - **"Radar"** — assumed Radarr. If you meant ADS-B aircraft tracking
   (`readsb`/`tar1090` + an RTL-SDR dongle), that's a separate module.
@@ -114,10 +128,5 @@ Still unresolved from the original list:
 - **"Crypto"** — full node (`nix-bitcoin` is the strong answer), Monero, or
   just wallet storage?
 - **"OSINT networking map"** — inventory of your own gear (NetBox), or OSINT
-  tooling (SpiderFoot etc.)?
-- **TAK** — no native module; FreeTAKServer or `taky` in a container. Also
-  worth deciding whether it needs to be reachable from outside the tailnet,
-  because that changes the exposure model.
-- **Hardware specifics** — GPU model (determines the ROCm gfx override), disk
-  count and sizes (determines whether ZFS is worth it), RAM, and whether this
-  machine is staying dual-boot with Windows.
+  tooling? Note that `maps.nix` already installs `osmium`, which answers a lot
+  of geospatial questions without a server.

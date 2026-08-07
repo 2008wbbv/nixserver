@@ -28,8 +28,11 @@ in
       };
 
       # Pulled on activation so the box is useful offline.
+      # Sized for the 6750 XT's 12GB — see profiles/amdgpu.nix. Both of these
+      # stay fully GPU-resident; a 32B would spill to RAM and crawl.
       loadModels = [
-        "qwen3:8b"
+        "qwen3:8b" # daily driver, ~5GB
+        "qwen2.5-coder:14b" # ~9GB, still comfortably resident
         "nomic-embed-text" # embeddings, for RAG over your own docs
       ];
     };
