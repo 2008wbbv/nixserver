@@ -21,9 +21,9 @@
     ./services/downloads.nix
     ./services/anonymity.nix
     ./services/maps.nix
+    ./services/osint.nix
     ./services/llm.nix
     ./services/comms.nix
     ./services/printer.nix
-    ./services/ups.nix
   ];
 }

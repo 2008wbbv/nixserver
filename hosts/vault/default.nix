@@ -54,14 +54,30 @@
   homelab.storage.enable = false; # TODO: ZFS pool. Read the file first.
   homelab.files.enable = false; # Samba + Syncthing
   homelab.vaultwarden.enable = false; # password manager
-  homelab.media.enable = false; # Jellyfin + Navidrome + *arr
   homelab.knowledge.enable = false; # SearXNG + FreshRSS + Kiwix + books
+
+  homelab.media = {
+    enable = false; # Jellyfin + Audiobookshelf
+    # Jellyfin does handle music. Leave this off unless its mobile music
+    # clients annoy you — that's the specific thing Navidrome fixes.
+    navidrome = false;
+  };
 
   # --- Tier 3: the spicy tier ------------------------------------------------
   homelab.downloads.enable = false; # torrent, VPN-confined. Needs a WG config.
-  homelab.anonymity.enable = false; # Tor + I2P
-  homelab.maps.enable = false; # offline OSM basemap + viewer
+  homelab.anonymity.enable = false; # Tor + I2P, `tor-route on|off`
+  homelab.osint.enable = false; # SpiderFoot + maigret/holehe/exiftool
   homelab.llm.enable = false; # Ollama + Open WebUI
+  homelab.comms.enable = false; # Matrix (Synapse) + XMPP (Prosody)
+
+  homelab.maps = {
+    enable = false;
+    # TODO: your state. Draw the box at bboxfinder.com — west,south,east,north.
+    # The default below is the whole continental US, which is ~10x bigger than
+    # you need.
+    bbox = "-125.0,24.5,-66.9,49.4";
+    maxZoom = 14;
+  };
 
   # RX 6750 XT: RDNA2, gfx1031. ROCm ships support for gfx1030 (RDNA2 "big
   # navi") but not 1031, so we tell it to pretend. This is the standard,
@@ -71,8 +87,8 @@
     gfxVersion = "10.3.0";
   };
 
-  # --- Tier 4: hardware you don't own yet ------------------------------------
-  homelab.printer.enable = false; # Klipper over USB, no printer NIC
-  homelab.ups.enable = false; # NUT, once you buy a UPS
-  homelab.comms.enable = false; # Matrix
+  # --- Tier 4: needs hardware attached ---------------------------------------
+  # Klipper over USB. The printer has no NIC in play, and the klipper user is
+  # firewalled off from the internet — see the module.
+  homelab.printer.enable = false;
 }

@@ -77,13 +77,6 @@ searx:
 
 freshrss:
     password: ...
-
-murmur:
-    env: |
-        MURMUR_PASSWORD=...
-
-nut:
-    monitor-password: ...
 ```
 
 Only the ones for modules you've enabled are actually required — sops-nix will

@@ -68,7 +68,56 @@ in
           cors_domains = [ "https://printer.${config.homelab.domain}" ];
         };
         octoprint_compat = { };
+
+        # Moonraker's update manager phones home to GitHub on a timer to check
+        # for new Klipper/Mainsail releases. Off — updates come from rebuilding
+        # this flake, not from a service reaching out on its own.
+        update_manager = {
+          enable_auto_refresh = false;
+          refresh_interval = 0;
+        };
+
+        # No announcement feed either; it's another outbound poll.
+        announcements.subscriptions = [ ];
       };
+    };
+
+    #########################################################################
+    # "Connected to Klipper, but not connected to the internet."
+    #
+    # Two separate things, and both are handled:
+    #
+    #   The printer itself has no network interface in play at all. Klipper
+    #   splits the stack — the mainboard speaks serial over USB to this host.
+    #   That's an air gap enforced by physics, not by a firewall rule.
+    #
+    #   The Klipper/Moonraker *services* on this host are blocked from
+    #   reaching the internet by the rule below. They can still be reached
+    #   from the tailnet (inbound is unaffected), and they can still talk to
+    #   each other over loopback. They just cannot originate a connection to
+    #   anything outside the LAN — no telemetry, no update checks, no
+    #   fetching from GitHub if a config option gets flipped by accident.
+    #
+    # This is the part most "isolated printer" setups skip: they isolate the
+    # printer and then leave the host software free to phone out.
+    #########################################################################
+    networking.nftables.tables.klipper-egress = {
+      family = "inet";
+      content = ''
+        chain output {
+          type filter hook output priority 0; policy accept;
+
+          # Everything below applies only to the klipper user.
+          skuid != klipper return
+
+          # Loopback and the tailnet stay reachable, so the web UI works.
+          ip  daddr { 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10 } return
+          ip6 daddr { ::1, fd00::/8, fe80::/10 } return
+
+          # Anything else the klipper user tries to reach: dropped.
+          drop
+        }
+      '';
     };
 
     services.mainsail = {

@@ -35,10 +35,7 @@ in
           job_name = "smartctl";
           static_configs = [{ targets = [ "127.0.0.1:9633" ]; }];
         }
-      ] ++ lib.optional config.homelab.ups.enable {
-        job_name = "ups";
-        static_configs = [{ targets = [ "127.0.0.1:9199" ]; }];
-      };
+      ];
 
       # The alerts that would actually have saved you, on a single-box setup.
       rules = [

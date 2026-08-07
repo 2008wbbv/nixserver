@@ -43,10 +43,10 @@ Do not try to bring this up all at once. Each tier should be green and
 committed before you start the next.
 
 **Tier 0 — install.**
-Boot the NixOS installer, partition (by hand, or with `disks.nix` if you're
-wiping the disk), install, reboot. Replace
-`hosts/vault/hardware-configuration.nix` with the generated one. Set
-`networking.hostId`. Add your SSH key to `hosts/vault/default.nix`.
+Follow [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md) — Windows stays,
+shrunk, and there are three things to do in Windows *first* that are painful to
+discover later. Replace `hosts/vault/hardware-configuration.nix` with the
+generated one, set `networking.hostId`, add your SSH key.
 
 **Tier 1 — get on the tailnet.**
 `tailscale`, `dns`, `proxy`, `monitoring`. After this the box is reachable from
@@ -63,12 +63,12 @@ the router approach never would.
 before you put anything in Vaultwarden you can't afford to lose.
 
 **Tier 3 — the rest.**
-`downloads`, `anonymity`, `maps`, `llm`. Verify the VPN namespace actually
-confines traffic (commands are in `modules/services/downloads.nix`) before
-you use it for anything.
+`downloads`, `anonymity`, `maps`, `osint`, `llm`, `comms`. Verify the VPN
+namespace actually confines traffic, and that `tor-route test` shows two
+different IPs, before relying on either.
 
-**Tier 4 — hardware you don't own yet.**
-`printer`, `ups`, `comms`.
+**Tier 4 — needs hardware attached.**
+`printer`.
 
 ## Deploying
 
@@ -99,6 +99,12 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
 - **The 3D printer is air-gapped by USB, not by VLAN.** Klipper's split
   architecture means the printer mainboard has no network interface in play
   at all. Stronger than the VLAN plan, and available today.
+- **Tor routing is a toggle**, scoped to a `torified` group rather than the
+  whole host — `tor-route on|off|test`. Whole-host transparent routing on a
+  headless box you reach over Tailscale is how people lock themselves out.
+- **The Klipper user is firewalled off from the internet.** Most "isolated
+  printer" setups isolate the printer and then leave the host software free to
+  phone home. Inbound from the tailnet still works.
 - **Maps, not TAK.** A single Protomaps `.pmtiles` file served as a static
   file, read directly by MapLibre in the browser. No PostGIS, no osm2pgsql,
   no renderer, no tile cache — and it works with the internet unplugged.
@@ -114,7 +120,7 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
 | GPU | RX 6750 XT — RDNA2, gfx1031, 12GB. ROCm needs `HSA_OVERRIDE_GFX_VERSION=10.3.0`, wired up in `profiles/amdgpu.nix`. H.264/HEVC encode; **no AV1 encode** (RDNA3+ only). |
 | RAM | 33GB. ZFS ARC capped at 8GB so it doesn't fight Ollama for what spills out of VRAM. |
 | Disks | 2. One for root, one for a single-vdev data pool — a mirror needs a third disk. Backups are carrying the redundancy load until then. |
-| Boot | Currently dual-boots Windows. `disks.nix` is destructive and stays unimported until that's resolved. |
+| Boot | Dual-boots Windows (shrunk, kept for gaming). Disk 1 partitioned by hand; `disks.nix` is only safe to point at disk 2. See [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md). |
 
 Model sizing for 12GB: 8B at Q4 (~5GB) and 14B at Q4 (~9GB) stay GPU-resident.
 32B needs ~18GB and will spill to system RAM, where it drops to single-digit
@@ -122,11 +128,10 @@ tokens/sec.
 
 ## Open questions
 
-- **"Radar"** — assumed Radarr. If you meant ADS-B aircraft tracking
-  (`readsb`/`tar1090` + an RTL-SDR dongle), that's a separate module.
-- **"Land chad"** — landchad.net-style self-hosting, or LanCache?
+- **Which state?** `homelab.maps.bbox` still defaults to the whole continental
+  US, which is ~10x more than you asked for. Draw the box at bboxfinder.com.
+- **"Land chad"** — still don't know what this is.
 - **"Crypto"** — full node (`nix-bitcoin` is the strong answer), Monero, or
   just wallet storage?
-- **"OSINT networking map"** — inventory of your own gear (NetBox), or OSINT
-  tooling? Note that `maps.nix` already installs `osmium`, which answers a lot
-  of geospatial questions without a server.
+- **Disk sizes** — needed to say how much to leave Windows and whether the data
+  pool is worth ZFS at all.

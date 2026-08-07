@@ -67,20 +67,16 @@ let
       mkdir -p "$DIR/vendor"
 
       # --- basemap -------------------------------------------------------
-      # pmtiles can slice a bounding box out of the hosted planet file WITHOUT
+      # pmtiles slices a bounding box out of the hosted planet file WITHOUT
       # downloading all ~120GB of it — it range-requests only the tiles inside
       # your box. This is the feature that makes offline maps practical.
-      #
-      #   bbox is west,south,east,north
-      #   continental US shown; replace with your area of interest.
       if [ ! -f "$DIR/basemap.pmtiles" ]; then
-        echo "==> extracting basemap (this pulls only your bbox)"
+        echo "==> extracting basemap for bbox ${cfg.bbox}"
         pmtiles extract \
-          https://build.protomaps.com/20240101.pmtiles \
+          "${cfg.planetUrl}" \
           "$DIR/basemap.pmtiles" \
-          --bbox=-125.0,24.5,-66.9,49.4
-        # NOTE: the dated filename above rolls forward. Check
-        # https://maps.protomaps.com/builds/ for the current build.
+          --bbox="${cfg.bbox}" \
+          --maxzoom=${toString cfg.maxZoom}
       fi
 
       # --- viewer libraries ----------------------------------------------
@@ -95,8 +91,50 @@ let
   };
 in
 {
-  options.homelab.maps.enable =
-    lib.mkEnableOption "offline OpenStreetMap basemap + web viewer";
+  options.homelab.maps = {
+    enable = lib.mkEnableOption "offline OpenStreetMap basemap + web viewer";
+
+    bbox = lib.mkOption {
+      type = lib.types.str;
+      default = "-125.0,24.5,-66.9,49.4"; # continental US
+      example = "-80.52,39.72,-75.24,42.52"; # Pennsylvania
+      description = ''
+        Area to extract, as west,south,east,north in decimal degrees.
+
+        A single US state at maxZoom 14 lands somewhere between 150MB and 1.5GB
+        depending on how dense it is — trivial next to your media library.
+
+        Easiest way to get the numbers: draw a box at bboxfinder.com, or look
+        the state up on Wikipedia (it lists extreme points), or:
+          curl 'https://nominatim.openstreetmap.org/search?q=Pennsylvania&format=json' | jq '.[0].boundingbox'
+        (note nominatim returns south,north,west,east — different order.)
+
+        Pad it out a bit past the border. Nothing is worse than a map that
+        stops exactly where you were driving to.
+      '';
+    };
+
+    maxZoom = lib.mkOption {
+      type = lib.types.int;
+      default = 14;
+      description = ''
+        Deepest zoom level to include. This is the main size lever.
+          12  city blocks visible, small file
+          14  individual buildings — the sane default
+          15+ roughly quadruples size per level for detail you rarely need
+      '';
+    };
+
+    planetUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://build.protomaps.com/20240101.pmtiles";
+      description = ''
+        Protomaps planet build to slice from. These are dated and roll forward;
+        check https://maps.protomaps.com/builds/ for the current one before
+        your first extract. TODO: update this to a recent build.
+      '';
+    };
+  };
 
   config = lib.mkIf cfg.enable {
     #########################################################################
