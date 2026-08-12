@@ -24,6 +24,8 @@
     ./services/osint.nix
     ./services/llm.nix
     ./services/comms.nix
+    ./services/selfhost.nix
+    ./services/gaming.nix
     ./services/printer.nix
   ];
 }

@@ -67,8 +67,11 @@ before you put anything in Vaultwarden you can't afford to lose.
 namespace actually confines traffic, and that `tor-route test` shows two
 different IPs, before relying on either.
 
+**Tier 3b — landchad-flavoured extras.**
+`selfhost.forgejo`, `selfhost.nextcloud`, `selfhost.website`.
+
 **Tier 4 — needs hardware attached.**
-`printer`.
+`printer` (USB), `gaming` (dummy HDMI plug + a Moonlight client at the TV).
 
 ## Deploying
 
@@ -112,6 +115,11 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
   weekend on its own. Nothing here blocks adding it later.
 - **Matrix federation is off**, because federating contradicts "nothing
   public". See the note in `modules/services/comms.nix` for the three ways out.
+- **Game streaming is the one deliberate firewall hole.** Sunshine's ports are
+  opened on the LAN because that's the single workload where the tailnet's
+  extra hop and WireGuard encryption actually cost you. Set
+  `homelab.gaming.lanStreaming = false` to force it over the tailnet instead.
+- **RomM is the only container.** Everything else is a native NixOS module.
 
 ## Hardware
 
@@ -126,12 +134,31 @@ Model sizing for 12GB: 8B at Q4 (~5GB) and 14B at Q4 (~9GB) stay GPU-resident.
 32B needs ~18GB and will spill to system RAM, where it drops to single-digit
 tokens/sec.
 
+## On landchad.net
+
+Good site; the service *selection* is worth mining. Two structural mismatches
+to know about before following any of it literally:
+
+- It targets a **public VPS with a real domain and open ports**. You chose
+  tailnet-only, so the nginx/certbot/DNS half of most guides doesn't apply —
+  Caddy and Tailscale cover it, with nothing exposed.
+- It's **imperative** (`apt install`, edit `/etc/…`, `systemctl enable`).
+  Doing that on NixOS fights the machine: your changes vanish on the next
+  rebuild. Read the guides for *what* to run and why; take the *how* from the
+  NixOS module.
+
+Coverage against its list: RSS, SearXNG, Vaultwarden, Syncthing, Matrix, XMPP,
+Tor hidden services and WireGuard were already here. Forgejo, Nextcloud and a
+static site are now in `modules/services/selfhost.nix`. Email stays deferred.
+Fediverse and PeerTube are skipped — both only make sense federated and public.
+
 ## Open questions
 
 - **Which state?** `homelab.maps.bbox` still defaults to the whole continental
   US, which is ~10x more than you asked for. Draw the box at bboxfinder.com.
-- **"Land chad"** — still don't know what this is.
 - **"Crypto"** — full node (`nix-bitcoin` is the strong answer), Monero, or
-  just wallet storage?
+  just wallet storage? The only item from the original list still unaddressed.
+- **Does your Proton library actually work?** Check protondb.com. If it does,
+  drop the dual-boot and the server stops going down when you game.
 - **Disk sizes** — needed to say how much to leave Windows and whether the data
   pool is worth ZFS at all.

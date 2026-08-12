@@ -87,8 +87,26 @@
     gfxVersion = "10.3.0";
   };
 
+  # --- Tier 3b: landchad-flavoured selfhosting --------------------------------
+  homelab.selfhost = {
+    forgejo = false; # git hosting — worth it just to own this repo
+    nextcloud = false; # only for CalDAV/CardDAV; Syncthing beats it for files
+    website = false; # static site, tailnet-only
+  };
+
   # --- Tier 4: needs hardware attached ---------------------------------------
   # Klipper over USB. The printer has no NIC in play, and the klipper user is
   # firewalled off from the internet — see the module.
   homelab.printer.enable = false;
+
+  # Steam + Sunshine streaming to the TV. Needs a dummy HDMI plug in the GPU
+  # and a Moonlight client at the TV — read the module before enabling.
+  # Check protondb.com for your library first: if everything you play works
+  # under Proton, this replaces the Windows dual-boot entirely.
+  homelab.gaming = {
+    enable = false;
+    lanStreaming = true; # the one deliberate firewall hole in this config
+    emulation = false; # RetroArch + ES-DE + standalone emulators
+    romm = false; # browser-playable ROM library (the only container here)
+  };
 }
