@@ -45,58 +45,132 @@ ls -la /mnt/check
 If it holds nothing but an empty `EFI/` directory or an old distro's files,
 that's ~49 GB back for free. Don't touch it until you've looked.
 
-## Your options, in order of how much I'd recommend them
+## How much do you actually need to free?
 
-### 1. Buy a 2 TB NVMe — ~$100
+Concrete targets, so you know when to stop deleting:
 
-This is the answer. Your board is LGA1700 for the 12700KF and will have at
-least two M.2 slots, very likely three.
+| For | Space | Notes |
+|---|---|---|
+| NixOS root + nix store | **150 GB** | 50 GB works; 150 is comfortable. The store grows — 20 bootable generations of a system with GNOME, Steam and emulators is not small. |
+| Swap | 16 GB | |
+| Local models | 50 GB | 8B ≈ 5 GB, 14B ≈ 9 GB, and you'll collect a few |
+| Offline Wikipedia | 10–110 GB | simple-English 10 GB, text-only 50 GB, full-with-images 110 GB |
+| Maps (one state) | < 1 GB | genuinely trivial |
+| Media / NAS | whatever you have | the open-ended one |
 
-- Windows is **never touched**. No shrinking, no risk, no BitLocker drama.
-- NixOS gets a whole disk to itself.
-- The NAS gets actual room, which is the entire point of building one.
-- Zero destructive operations anywhere in the process.
+**Minimum viable: ~250 GB. Comfortable: ~600 GB.**
 
-Every other option on this list is you spending hours to avoid spending $100,
-and ending up with less. Given that you're planning to store a media library,
-a Wikipedia dump, and local models, 2 TB is the floor rather than a luxury.
+Below 250 GB you'll be managing space instead of using the machine, which
+defeats the point.
 
-### 2. Free up real space first
+## Option 1 — Delete games (free)
 
-If the money isn't there right now: you have ~2.8 TB of data across two disks
-and no idea what it is. Find out.
+You said you have a lot installed, which makes this the obvious first move.
 
 ```powershell
-winget install WinDirStat
+cd path\to\nixserver\scripts
+.\disk-report.ps1 -TargetGB 600
 ```
 
-Then decide what moves to the new NAS later and what deletes now. Game
-installs are the usual answer — modern titles are 100–150 GB each and you
-probably have several you haven't launched in a year. Steam re-downloads them
-on demand.
+It reports Steam games sorted by size with **last-played dates and a running
+cumulative total** — read down until Cumulative passes your target and stop.
+It also measures Xbox/Game Pass installs, which hide in an ACL-protected
+folder that Explorer misreports, and lists the biggest directories on every
+drive for everything that isn't a game.
 
-Aim to free 500 GB minimum before installing.
+It calls out two easy categories: games not played in over a year, and games
+installed but never played at all. That is usually most of the way to 600 GB
+on its own.
 
-### 3. Reclaim the mystery 48.83 GB
+Uninstall through Steam (Library → right-click → Manage → Uninstall) rather
+than deleting folders, or Steam keeps the manifest and gets confused. Nothing
+is permanent — Steam re-downloads on demand, and saves are in Steam Cloud for
+most titles. Check the cloud icon before removing anything you have a lot of
+progress in.
 
-Do this regardless of which option you pick, once you've confirmed what it is.
+### The gotcha that will otherwise waste your evening
+
+**Deleting files does not make a partition shrinkable.** Windows can only
+shrink a volume up to the last *unmovable* file, and if a pagefile or a shadow
+copy sits near the end of the disk, Disk Management will offer you 40 GB after
+you just freed 600.
+
+Turn the immovable things off first, shrink, then turn them back on:
+
+```powershell
+# Run as Administrator.
+powercfg /hibernate off                        # deletes hiberfil.sys
+Disable-ComputerRestore -Drive "C:\", "D:\"    # drops shadow copies
+vssadmin delete shadows /all /quiet
+```
+
+Then set the pagefile to none: System Properties → Advanced → Performance →
+Settings → Advanced → Virtual Memory → Uncheck automatic → No paging file →
+**reboot**.
+
+Now shrink in Disk Management. You should get nearly all of it.
+
+Afterwards, put the pagefile back (System managed) and re-enable restore.
+Leave hibernation off — you disabled Fast Startup anyway, and it just consumes
+32 GB matching your RAM.
+
+If it *still* won't shrink far enough, the free tool that handles this
+properly is a GParted live USB, which can move unmovable-to-Windows files
+because Windows isn't running. Back up first.
+
+## Option 2 — Buy a 2 TB NVMe (~$100)
+
+Still worth considering even though you can free space, because it buys things
+deleting doesn't:
+
+- Windows is **never touched** — no shrinking, no BitLocker risk, no chance of
+  a partition operation going wrong on a 97%-full disk with no room to recover
+- You keep the games
+- The NAS gets real room rather than leftovers
+
+Your board is LGA1700 for the 12700KF and will have at least two M.2 slots.
+
+**Do both if you can**: delete the games you don't play regardless (they're
+dead weight), and add the disk when convenient.
+
+## Option 3 — Reclaim the mystery 48.83 GB
+
+Do this either way, once you've confirmed what it is.
 
 ---
 
-## Layout, assuming you buy the disk
+## Layout
+
+**If you free space on D: (no purchase):**
 
 ```
-Disk 0  (1TB)   Windows, untouched          ← C:, Recovery, ESP 423MB
-Disk 1  (2TB)   existing data, untouched    ← D: (+ 48GB to investigate)
-Disk 2  (NEW)   ┌──────────────────────────┐
-                │ ESP        1 GB          │
-                │ NixOS root + nix store   │
-                │ data pool                │
-                └──────────────────────────┘
+Disk 0  (1TB)   Windows, untouched           ← C:, Recovery, ESP 423MB
+Disk 1  (2TB)   ┌───────────────────────────┐
+                │ D: NTFS  (shrunk, ~1.2TB) │  games stay here
+                │ ESP           1 GB   NEW  │
+                │ NixOS root + data  ~600GB │  NEW
+                │ (48.83GB mystery partition — investigate)
+                └───────────────────────────┘
 ```
 
-Nothing destructive happens to a disk with your data on it. That alone is
-worth the hundred dollars.
+**If you buy the NVMe:**
+
+```
+Disk 0  (1TB)   Windows, untouched
+Disk 1  (2TB)   existing data, untouched
+Disk 2  (NEW)   ESP 1GB + NixOS root + data pool
+```
+
+The second costs $100 and touches nothing. The first is free and requires a
+partition operation on a nearly-full disk holding all your data. Both work;
+they trade money against risk.
+
+### Don't share a Steam library between Windows and Linux
+
+Tempting, since you'd have games on both sides. Don't. Proton on an NTFS
+partition is a known source of misery — case sensitivity, permissions, and
+file-locking semantics all differ, and the failures are intermittent rather
+than obvious. Keep separate libraries and accept the duplication.
 
 **Why NixOS gets its own 1 GB ESP** rather than sharing Windows' 423 MB one:
 each generation puts a kernel and initrd there and you're keeping 20 of them.
@@ -135,12 +209,33 @@ lsblk -o NAME,PATH,SIZE,MODEL,SERIAL,MOUNTPOINT
 Write down `/dev/disk/by-id/` paths. Never use `/dev/sda`-style names for
 anything permanent — they reorder between boots.
 
-Since the new disk is empty, `disks.nix` is safe to point at it. Edit the
-device path there, then:
+**If you bought a new disk**, it's empty, so `disks.nix` is safe to point at
+it. Edit the device path there, then:
 
 ```
 sudo nix run github:nix-community/disko -- --mode disko ./hosts/vault/disks.nix
 sudo nixos-generate-config --no-filesystems --root /mnt
+```
+
+**If you freed space on Disk 1 instead**, do NOT use `disks.nix` — it wipes
+the whole device, D: included. Partition the free space by hand:
+
+```
+sudo cgdisk /dev/disk/by-id/<disk1>
+```
+
+In the unallocated space, create:
+- 1 GB, type `EF00` — the NixOS ESP
+- the rest, type `8300`
+
+Then format and mount:
+
+```
+sudo mkfs.fat -F32 -n NIXBOOT /dev/disk/by-id/<disk1>-partN
+sudo mkfs.btrfs -L nixos      /dev/disk/by-id/<disk1>-partM
+sudo mount /dev/disk/by-id/<disk1>-partM /mnt
+sudo mkdir -p /mnt/boot && sudo mount /dev/disk/by-id/<disk1>-partN /mnt/boot
+sudo nixos-generate-config --root /mnt
 ```
 
 Copy the generated `hardware-configuration.nix` over the placeholder in this

@@ -37,6 +37,7 @@ docs/
   GAMING-ARCHITECTURE.md     server + PC + Game Pass on one box
   MIGRATING-FROM-WINDOWS.md  exporting your program list, nixpkgs equivalents
 scripts/
+  disk-report.ps1              what's eating your disks, and what to delete
   export-windows-programs.ps1  run this in Windows first
   match-nixpkgs.sh             then this against the CSV it produces
 ```
@@ -147,11 +148,13 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
 | Disks | Disk 0: 1TB, Windows, **30GB free**. Disk 1: 2TB, data, **18GB free**. |
 | Boot | Dual-boots Windows — Game Pass makes that non-optional. |
 
-> **Blocker: there is no room to install this.** ~48GB free across both disks,
-> and you can't shrink a partition below its contents. A 2TB NVMe (~$100) is
-> the recommended fix and keeps every destructive operation away from existing
-> data. There's also a suspicious 48.83GB partition mislabelled as an EFI
-> System Partition on Disk 1 that's probably reclaimable.
+> **Blocker: there is no room to install this yet.** ~48GB free across both
+> disks, and you can't shrink a partition below its contents. Target ~600GB
+> free (250GB is the bare minimum). Two ways there — delete unplayed games, or
+> add a 2TB NVMe (~$100) so nothing existing gets touched. Run
+> `scripts/disk-report.ps1` to see what's actually eating the space. There's
+> also a suspicious 48.83GB partition mislabelled as an EFI System Partition on
+> Disk 1 that's probably reclaimable.
 > See [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md).
 
 Model sizing for 12GB: 8B at Q4 (~5GB) and 14B at Q4 (~9GB) stay GPU-resident.
