@@ -63,39 +63,48 @@ never reboots.
 - **Cost:** depends entirely on the question below
 - **Effort:** a weekend, and a real one
 
-### The question that decides everything: does your CPU have integrated graphics?
+### Answered: your CPU is an i7-12700KF, and the F means no integrated graphics
 
-**If yes** (Ryzen with a `G` suffix — 5600G, 5700G, 8700G — or any Intel with
-UHD/Iris graphics): this is straightforward. The iGPU drives your NixOS
-desktop, the 6750 XT gets bound to `vfio-pci` at boot and belongs to Windows
-permanently. Both run at once. You can be using GNOME while the Windows VM
-games. This is the clean answer and I'd recommend it without hesitation.
+That settles it. Intel's `F` suffix means the iGPU is fused off, so the 6750 XT
+is the only graphics device in the machine. Two ways forward:
 
-**If no** (Ryzen 5600X, 5800X, 3600, any non-G Ryzen — which is the common
-case): you need **single-GPU passthrough**. A script unbinds the GPU from the
-host, hands it to the VM, and reverses it on shutdown. Your desktop session
-dies while Windows is running — but **all your services keep running**,
-because they're headless and don't care about the GPU.
+**Buy a cheap second GPU (~$40-60 used).** A GT 1030, RX 550, or literally any
+old card in a spare PCIe slot drives your GNOME desktop while the 6750 XT is
+bound to `vfio-pci` and belongs to Windows permanently. Both run at the same
+time — you can be working in GNOME while the Windows VM games. This is the
+clean version and, combined with the NVMe you already need, it's the difference
+between "a weekend project that works" and "a weekend project that fights you".
 
-That's the key insight: single-GPU passthrough is bad for a workstation and
-perfectly fine for a server that occasionally games. Jellyfin, DNS, Vaultwarden
-and everything else stay up. You just can't use the Linux desktop and Windows
-at the same time.
+**Or single-GPU passthrough, free.** A script unbinds the GPU from the host,
+hands it to the VM, and reverses it on shutdown. Your Linux desktop session
+dies while Windows runs — but **every service keeps running**, because they're
+all headless and don't care about the GPU. Jellyfin, DNS, Vaultwarden,
+Tailscale: unaffected.
 
-It's fiddly to set up (IOMMU groups, ROM patching sometimes, a
-bind/unbind script that has to be right) and can break on kernel updates.
+That's the key insight for your situation: single-GPU passthrough is a bad
+deal on a workstation and a perfectly fine one on a server that occasionally
+games. The thing it costs you — simultaneous Linux desktop and Windows — is
+exactly the thing you already give up with dual boot. You're strictly better
+off than now.
 
-**Or spend ~$50 on a used GPU.** Any GT 1030, RX 550, or similar in a second
-slot drives the NixOS desktop and turns this back into the easy case. If your
-CPU has no iGPU, this is by far the best money you can spend on this project.
+It is genuinely fiddly: IOMMU group separation, sometimes ROM patching, and a
+bind/unbind hook script that has to be exactly right or you get a black screen
+with no way to see why. Budget a weekend and don't do it first.
+
+Good news on Alder Lake: IOMMU support on Z690/B660-class boards is solid, and
+the 12700KF's PCIe topology usually puts the primary x16 slot in its own IOMMU
+group, which is the thing that most often blocks passthrough.
 
 ### GPU contention, either way
 
-The 6750 XT can't be in a Windows VM and transcoding Jellyfin at the same
-time. In the iGPU case, point Jellyfin's VAAPI at the iGPU — it's plenty for
-transcoding and this stops being a problem. In the single-GPU case, plan on
-Jellyfin falling back to CPU transcode while you're gaming, or pre-transcode
-your library so it direct-plays and never needs a GPU at all.
+The 6750 XT can't be in a Windows VM and transcoding Jellyfin at the same time.
+With no iGPU to fall back on, your options are: let Jellyfin use CPU transcode
+while you're gaming (the 12700KF has 20 threads — it'll cope with one or two
+streams), or pre-transcode your library so it direct-plays and never needs a
+GPU at all. The second is the real fix and is worth doing regardless.
+
+If you buy the cheap second GPU, point Jellyfin's VAAPI at *that* one instead
+and the problem disappears entirely — even a GT 1030 transcodes fine.
 
 ---
 
@@ -122,23 +131,6 @@ than you'd expect — and every hour it covers is an hour the server stays up.
 
 ---
 
-## What I'd actually do
-
-**Now:** Option A + Option C. Dual boot as you already planned, set a secondary
-DNS so the network survives it, and use cloud gaming on the TV for anything it
-handles well. Zero extra work, zero extra cost. Get the server itself solid
-first — that's the part with real value in it.
-
-**Then, if the downtime annoys you:** check whether your CPU has an iGPU. If it
-does, Option B is a weekend well spent. If it doesn't, buy a $50 GPU and then
-do Option B.
-
-**Skip:** single-GPU passthrough with no fallback display, unless you enjoy
-that kind of thing for its own sake. The failure mode is a black screen with no
-way to see what went wrong.
-
----
-
 ## The TV, concretely
 
 Your TV has both Moonlight and Steam Link, which covers every case:
@@ -159,8 +151,24 @@ when you can't be bothered to configure Sunshine.
 tolerance for jitter, and WiFi variance is precisely what streaming can't
 absorb. If you can't run cable, MoCA over existing coax beats WiFi.
 
-## Unanswered
+## Hardware reality check
 
-**What CPU is it?** That single fact decides whether Option B is a clean
-afternoon or a fiddly weekend, and it's the only thing standing between you and
-a server that never goes down.
+| | |
+|---|---|
+| CPU | i7-12700KF — 8P+4E, 20 threads. Plenty. **No iGPU** (the `F`). |
+| RAM | 32 GB. Fine for all of this simultaneously, including a Windows VM. |
+| GPU | RX 6750 XT — the only display device in the box. |
+| Disks | **Both ~98% full.** This blocks everything; see INSTALL-DUALBOOT.md. |
+
+The disk situation is the actual blocker, not the GPU one. ~48 GB free across
+two drives is not enough to install onto. Solve that first.
+
+## Revised recommendation, given all of the above
+
+1. **Buy a 2 TB NVMe (~$100).** Non-negotiable — you have no room otherwise,
+   and it keeps every destructive operation away from your existing data.
+2. **Dual boot + Xbox Cloud Gaming** to start. Set a secondary DNS so the
+   network survives Windows sessions. Get the server itself solid.
+3. **Later, if the downtime annoys you:** add a ~$50 second GPU and do the VM
+   passthrough properly. Total ~$150 for a machine that is a server, a
+   desktop, and a Game Pass gaming rig at the same time, permanently.

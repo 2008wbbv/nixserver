@@ -21,6 +21,13 @@ in
   boot.loader.systemd-boot.configurationLimit = lib.mkDefault 20;
 
   time.timeZone = lib.mkDefault "America/New_York"; # TODO: confirm
+
+  # Windows writes local time to the RTC, Linux writes UTC. Without this the
+  # clock jumps by your timezone offset every time you switch OS.
+  time.hardwareClockInLocalTime = true;
+
+  # Long enough to actually pick Windows from the boot menu.
+  boot.loader.timeout = lib.mkDefault 10;
   i18n.defaultLocale = "en_US.UTF-8";
 
   users.mutableUsers = false;

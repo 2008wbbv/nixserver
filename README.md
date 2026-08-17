@@ -33,8 +33,12 @@ modules/
   services/                  one file per capability, each `homelab.<x>.enable`
 secrets/README.md            how to set up sops
 docs/
-  INSTALL-DUALBOOT.md        shrinking Windows, two ESPs, the footguns
+  INSTALL-DUALBOOT.md        disk space, partitioning, the Windows footguns
   GAMING-ARCHITECTURE.md     server + PC + Game Pass on one box
+  MIGRATING-FROM-WINDOWS.md  exporting your program list, nixpkgs equivalents
+scripts/
+  export-windows-programs.ps1  run this in Windows first
+  match-nixpkgs.sh             then this against the CSV it produces
 ```
 
 Turning a service on is one line in `hosts/vault/default.nix`. That file is
@@ -45,11 +49,14 @@ meant to read as the inventory of the box.
 Do not try to bring this up all at once. Each tier should be green and
 committed before you start the next.
 
-**Tier 0 — install.**
-Follow [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md) — Windows stays,
-shrunk, and there are three things to do in Windows *first* that are painful to
-discover later. Replace `hosts/vault/hardware-configuration.nix` with the
-generated one, set `networking.hostId`, add your SSH key.
+**Tier 0 — make room, then install.**
+Read [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md) first: both disks are
+~98% full and nothing else can start until that's solved. It also covers the
+three things to do in Windows *before* touching partitions. While you're still
+booted into Windows, run `scripts/export-windows-programs.ps1` — it's much more
+annoying to get that list afterwards. Then replace
+`hosts/vault/hardware-configuration.nix` with the generated one, set
+`networking.hostId`, add your SSH key.
 
 **Tier 1 — get on the tailnet.**
 `tailscale`, `dns`, `proxy`, `monitoring`. After this the box is reachable from
@@ -74,7 +81,8 @@ different IPs, before relying on either.
 `selfhost.forgejo`, `selfhost.nextcloud`, `selfhost.website`.
 
 **Tier 4 — needs hardware attached.**
-`printer` (USB), `gaming` (dummy HDMI plug + a Moonlight client at the TV).
+`printer` (USB), `gaming` (dummy HDMI plug; the TV already has Moonlight and
+Steam Link).
 
 ## Deploying
 
@@ -133,10 +141,18 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
 
 | | |
 |---|---|
-| GPU | RX 6750 XT — RDNA2, gfx1031, 12GB. Graphics stack is excellent; compute is not. See the driver note below. H.264/HEVC encode; **no AV1 encode** (RDNA3+ only). |
-| RAM | 33GB. ZFS ARC capped at 8GB so it doesn't fight Ollama for what spills out of VRAM. |
-| Disks | 2. One for root, one for a single-vdev data pool — a mirror needs a third disk. Backups are carrying the redundancy load until then. |
-| Boot | Dual-boots Windows (shrunk, kept for gaming). Disk 1 partitioned by hand; `disks.nix` is only safe to point at disk 2. See [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md). |
+| CPU | i7-12700KF — Alder Lake, 8P+4E / 20 threads. **No iGPU** (the `F` suffix), which decides the GPU-passthrough question. |
+| GPU | RX 6750 XT — RDNA2, gfx1031, 12GB, and the only display device in the box. Graphics stack is excellent; compute is not — see below. H.264/HEVC encode, **no AV1 encode** (RDNA3+ only). |
+| RAM | 32GB. ZFS ARC capped at 8GB so it doesn't fight local inference. |
+| Disks | Disk 0: 1TB, Windows, **30GB free**. Disk 1: 2TB, data, **18GB free**. |
+| Boot | Dual-boots Windows — Game Pass makes that non-optional. |
+
+> **Blocker: there is no room to install this.** ~48GB free across both disks,
+> and you can't shrink a partition below its contents. A 2TB NVMe (~$100) is
+> the recommended fix and keeps every destructive operation away from existing
+> data. There's also a suspicious 48.83GB partition mislabelled as an EFI
+> System Partition on Disk 1 that's probably reclaimable.
+> See [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md).
 
 Model sizing for 12GB: 8B at Q4 (~5GB) and 14B at Q4 (~9GB) stay GPU-resident.
 32B needs ~18GB and will spill to system RAM, where it drops to single-digit
@@ -190,5 +206,4 @@ Fediverse and PeerTube are skipped — both only make sense federated and public
   integrated GPU decides if "Windows in a VM so the server never reboots" is a
   clean afternoon or a fiddly weekend. See
   [docs/GAMING-ARCHITECTURE.md](docs/GAMING-ARCHITECTURE.md).
-- **Disk sizes** — needed to say how much to leave Windows and whether the data
-  pool is worth ZFS at all.
+
