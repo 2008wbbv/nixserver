@@ -9,6 +9,7 @@
     ./profiles/amdgpu.nix
     ./profiles/storage.nix
     ./profiles/desktop.nix
+    ./profiles/resilience.nix
 
     ./services/tailscale.nix
     ./services/dns.nix

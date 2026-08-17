@@ -62,15 +62,32 @@ in
                 labels.severity = "critical";
               }
               {
+                # The one that matters most on a box that reboots often: a
+                # unit that didn't come back. Deliberately 10m so it fires
+                # after boot has settled rather than during it.
                 alert = "ServiceFailed";
                 expr = ''node_systemd_unit_state{state="failed"} == 1'';
-                for = "5m";
+                for = "10m";
                 labels.severity = "warning";
               }
               {
-                alert = "HostRebooted";
-                expr = ''time() - node_boot_time_seconds < 300'';
-                labels.severity = "info";
+                # Not "the host rebooted" — this box reboots into Windows
+                # regularly and that's expected. This fires when it comes back
+                # up but systemd never reaches a fully-started state, which is
+                # the actual failure worth knowing about.
+                alert = "DegradedAfterBoot";
+                expr = ''node_systemd_system_running != 1 and (time() - node_boot_time_seconds) > 600'';
+                for = "10m";
+                labels.severity = "warning";
+              }
+              {
+                # Backups are the thing most likely to quietly stop happening
+                # when the machine is off at 02:00 every night. Persistent
+                # timers should catch up — this verifies they did.
+                alert = "BackupStale";
+                expr = ''time() - node_systemd_timer_last_trigger_seconds{name="restic-backups-offsite.timer"} > 172800'';
+                for = "1h";
+                labels.severity = "critical";
               }
             ];
           }];

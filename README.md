@@ -29,7 +29,8 @@ hosts/vault/
   disks.nix                  declarative partitioning (destructive, opt-in)
 modules/
   options.nix                shared settings (domain, dataDir, admin)
-  profiles/                  base, hardening, amdgpu, storage, desktop
+  profiles/                  base, hardening, amdgpu, storage, desktop,
+                             resilience
   services/                  one file per capability, each `homelab.<x>.enable`
 secrets/README.md            how to set up sops
 docs/
@@ -137,6 +138,11 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
   also the closest thing to the macOS feel you described. Switch with one line:
   `homelab.desktop.environment = "plasma"`.
 - **Vulkan, not ROCm, for inference.** See below — this one is a correction.
+- **Built for a box that reboots, not one that never does.** Dual boot is the
+  accepted arrangement, so `profiles/resilience.nix` makes "was powered off"
+  the normal case: persistent timers catch up on missed work, services retry
+  instead of staying dead, a watchdog handles hangs, and logs survive reboots.
+  Alerts fire on *degraded after boot*, not on the reboot itself.
 
 ## Hardware
 
@@ -199,14 +205,35 @@ Tor hidden services and WireGuard were already here. Forgejo, Nextcloud and a
 static site are now in `modules/services/selfhost.nix`. Email stays deferred.
 Fediverse and PeerTube are skipped — both only make sense federated and public.
 
+## Coming back from a reboot
+
+The machine gets shut down into Windows regularly, so recovery is a design
+requirement rather than an afterthought. What handles it:
+
+| Concern | Handled by |
+|---|---|
+| Scheduled work missed while off | `Persistent = true` on every timer — runs shortly after next boot instead of silently skipping |
+| Service fails once and stays dead | `Restart = on-failure` with backoff and a start limit |
+| Started before the network was ready | ordering on `network-online.target` |
+| Kernel hang with nobody present | hardware watchdog, 30s runtime / 10min reboot |
+| "Why didn't it come up?" | persistent journald + a `boot-health-check` unit that logs failed units 2 min after boot |
+| Powering it on remotely | Wake-on-LAN configured; enable it in BIOS too |
+| Power blip leaves it off | BIOS "Restore on AC Power Loss" |
+
+**The important one is not in the config:** make sure NixOS stays the default
+systemd-boot entry. If Windows is default, any unattended reboot leaves the
+server down until you walk over to it. Verify with `bootctl status`, and don't
+press `d` in the boot menu with Windows selected.
+
+**And set a secondary DNS** on your devices or in the Tailscale admin console.
+DNS is the one service whose absence breaks the whole network rather than
+degrading gracefully.
+
 ## Open questions
 
 - **Which state?** `homelab.maps.bbox` still defaults to the whole continental
   US, which is ~10x more than you asked for. Draw the box at bboxfinder.com.
 - **"Crypto"** — full node (`nix-bitcoin` is the strong answer), Monero, or
   just wallet storage? The only item from the original list still unaddressed.
-- **What CPU?** This is now the biggest open question. Whether it has an
-  integrated GPU decides if "Windows in a VM so the server never reboots" is a
-  clean afternoon or a fiddly weekend. See
-  [docs/GAMING-ARCHITECTURE.md](docs/GAMING-ARCHITECTURE.md).
+- **Which state?** for `homelab.maps.bbox`.
 

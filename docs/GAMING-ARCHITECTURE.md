@@ -163,12 +163,27 @@ absorb. If you can't run cable, MoCA over existing coax beats WiFi.
 The disk situation is the actual blocker, not the GPU one. ~48 GB free across
 two drives is not enough to install onto. Solve that first.
 
-## Revised recommendation, given all of the above
+## DECIDED: Option A, dual boot
 
-1. **Buy a 2 TB NVMe (~$100).** Non-negotiable — you have no room otherwise,
-   and it keeps every destructive operation away from your existing data.
-2. **Dual boot + Xbox Cloud Gaming** to start. Set a secondary DNS so the
-   network survives Windows sessions. Get the server itself solid.
-3. **Later, if the downtime annoys you:** add a ~$50 second GPU and do the VM
-   passthrough properly. Total ~$150 for a machine that is a server, a
-   desktop, and a Game Pass gaming rig at the same time, permanently.
+You're fine with the server being off occasionally, provided it recovers
+cleanly on its own. That takes Option B off the table entirely — **the GPU
+question is closed**, no passthrough, no second card needed.
+
+It also moves the work: instead of engineering around downtime, the config
+engineers for *clean recovery from* downtime. That's `modules/profiles/
+resilience.nix` — persistent timers so missed backups and scrubs catch up,
+services that retry rather than staying dead, a watchdog for hangs, persistent
+logs, and Wake-on-LAN so you can power it back on without walking over.
+
+Two things that live outside the config and matter more than anything in it:
+
+1. **NixOS must stay the default systemd-boot entry.** If Windows is default,
+   an unattended reboot leaves the server down until you're physically there.
+   `bootctl status` to check.
+2. **Set a secondary DNS** on your devices or in the Tailscale admin console.
+   Everything else degrades gracefully when the box is off; DNS takes the
+   whole network with it.
+
+Option C (Xbox Cloud Gaming) is still worth trying — every hour it covers is
+an hour you don't reboot at all — but it's now a convenience rather than part
+of the architecture.
