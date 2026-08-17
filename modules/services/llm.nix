@@ -13,11 +13,16 @@ in
 
     services.ollama = {
       enable = true;
-      acceleration = "rocm";
+      # Ollama is ROCm-or-CPU. When the backend is "vulkan" we leave Ollama
+      # unaccelerated and use llama.cpp's Vulkan build for GPU work instead —
+      # see the package list at the bottom of this file.
+      acceleration =
+        if config.homelab.amdgpu.computeBackend == "rocm" then "rocm" else null;
       host = "127.0.0.1";
       port = 11434;
 
       # Spoof the gfx target for cards ROCm doesn't officially list.
+      # Only meaningful when acceleration is "rocm".
       rocmOverrideGfx = config.homelab.amdgpu.gfxVersion;
 
       environmentVariables = {
@@ -54,10 +59,18 @@ in
 
     homelab.proxy.routes.chat = "127.0.0.1:8088";
 
-    # llama.cpp directly, for when you want raw control over quantisation,
-    # context length, or GGUFs Ollama won't take.
+    # llama.cpp directly. On the Vulkan path this is the thing doing the
+    # actual GPU work, not just a convenience:
+    #
+    #   llama-server -m model.gguf -ngl 99 --host 127.0.0.1 --port 8090
+    #
+    # -ngl 99 offloads every layer to the GPU. Vulkan needs no ROCm, no
+    # HSA override, and no /opt/rocm symlink — it rides the same Mesa stack
+    # the desktop and games already use.
     environment.systemPackages = with pkgs; [
-      (llama-cpp.override { rocmSupport = true; })
+      (if config.homelab.amdgpu.computeBackend == "rocm"
+      then llama-cpp.override { rocmSupport = true; }
+      else llama-cpp.override { vulkanSupport = true; })
     ];
   };
 }

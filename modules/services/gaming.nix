@@ -67,12 +67,21 @@ in
     # clients for far more targets. Sunshine streams anything — emulators,
     # GOG, a browser, a whole desktop.
     #
-    # THE CATCH: anti-cheat. Games using kernel-level anti-cheat that hasn't
-    # opted into Proton — Valorant, Fortnite, Destiny 2, most competitive
-    # shooters — do not run on Linux and never will. Check your library at
-    # protondb.com BEFORE you commit to this. If everything you play is on the
-    # list, you can stop dual-booting entirely. If one game isn't, you're
-    # keeping Windows regardless and this is a bonus rather than a replacement.
+    # TWO CATCHES, and the second one applies to you:
+    #
+    #   Anti-cheat. Kernel-level anti-cheat that hasn't opted into Proton
+    #   (Valorant, Fortnite, Destiny 2, most competitive shooters) does not
+    #   run on Linux. Check protondb.com for your library.
+    #
+    #   PC GAME PASS DOES NOT RUN ON LINUX AT ALL. Not a per-title problem —
+    #   the Xbox app's MSIX/MSIXVC packaging and Gaming Runtime don't work
+    #   under Proton, so the entire platform is unavailable. The Xodus project
+    #   (started August 2026) is working on it and has auth and decryption
+    #   going, but not game execution yet.
+    #
+    # So this module does NOT replace your Windows install. It covers Steam,
+    # GOG, emulation and the desktop. Game Pass needs Windows — bare metal or
+    # in a VM. Read docs/GAMING-ARCHITECTURE.md before deciding which.
     #########################################################################
 
     programs.steam = {
@@ -230,31 +239,24 @@ in
     };
 
     #########################################################################
-    # Client hardware for the TV — pick one:
+    # Your TV already has Moonlight and Steam Link, so no client hardware is
+    # needed at all. Which to use:
     #
-    #   Nvidia Shield TV (~$150)   Best all-rounder. Native Moonlight, native
-    #                              RetroArch, wired ethernet, HDMI-CEC so the
-    #                              TV remote works. If you buy one thing, this.
+    #   Moonlight    -> Sunshine (this module). Lower latency, HEVC, and it
+    #                   streams anything: emulators, a desktop, non-Steam
+    #                   games. Prefer this.
+    #   Steam Link   -> Steam's own streaming. Steam games only, but zero
+    #                   configuration. Good fallback and good for a first test.
     #
-    #   Any Android TV box (~$50)  Moonlight works. Check it has ETHERNET —
-    #                              cheap boxes are WiFi-only and that's the
-    #                              thing that ruins streaming.
-    #
-    #   Raspberry Pi 5 (~$80)      moonlight-qt, or Batocera for standalone
-    #                              emulation. Fully open, more setup.
-    #
-    #   Steam Deck docked          If you have one, it's already a perfect
-    #                              Moonlight client and needs nothing.
-    #
-    #   LG TV (webOS)              There's a Moonlight port. No extra box at
-    #                              all. Samsung/Tizen has no good option.
+    # Both work against Windows too, which matters given Game Pass — see
+    # docs/GAMING-ARCHITECTURE.md. Install Sunshine on the Windows side and
+    # the same TV Moonlight client works against either OS.
     #
     # NETWORK: use ethernet. This is not a preference, it's the difference
     # between "indistinguishable from local" and "why is it stuttering". A
     # 4K60 stream is 40-50 Mbps sustained with zero tolerance for jitter, and
     # WiFi's variance is exactly the thing streaming can't absorb. If the TV
-    # can't be wired, MoCA over your existing coax or powerline is a better
-    # bet than WiFi.
+    # can't be wired, MoCA over your existing coax beats WiFi.
     #########################################################################
   };
 }

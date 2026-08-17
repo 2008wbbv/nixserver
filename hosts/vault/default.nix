@@ -79,12 +79,25 @@
     maxZoom = 14;
   };
 
-  # RX 6750 XT: RDNA2, gfx1031. ROCm ships support for gfx1030 (RDNA2 "big
-  # navi") but not 1031, so we tell it to pretend. This is the standard,
-  # well-trodden fix for 6700/6750-class cards — not a hack that might break.
+  # RX 6750 XT: RDNA2, gfx1031.
+  #
+  # Graphics are excellent — amdgpu is in-tree, Mesa RADV is mature, this is
+  # one of the best-supported gaming cards on Linux. Compute is the messy part:
+  # ROCm never officially supported gfx1031, and the usual 10.3.0 override has
+  # an active regression on ROCm 6.4.3+. Hence Vulkan below.
   homelab.amdgpu = {
     enable = true;
     gfxVersion = "10.3.0";
+    # Vulkan, not ROCm — ROCm 6.4.3+ has a live regression that segfaults
+    # gfx1031 the moment a model gets a prompt. Read the note in the module.
+    computeBackend = "vulkan";
+  };
+
+  # Desktop, for when you sit at the machine rather than SSH into it.
+  homelab.desktop = {
+    environment = "gnome";
+    # Only needed if Sunshine must capture a session with nobody logged in.
+    autoLogin = false;
   };
 
   # --- Tier 3b: landchad-flavoured selfhosting --------------------------------
@@ -99,10 +112,11 @@
   # firewalled off from the internet — see the module.
   homelab.printer.enable = false;
 
-  # Steam + Sunshine streaming to the TV. Needs a dummy HDMI plug in the GPU
-  # and a Moonlight client at the TV — read the module before enabling.
-  # Check protondb.com for your library first: if everything you play works
-  # under Proton, this replaces the Windows dual-boot entirely.
+  # Steam + Sunshine streaming to the TV (which already has Moonlight and
+  # Steam Link, so no client hardware needed).
+  #
+  # NOTE: this does NOT replace the Windows dual-boot for you — PC Game Pass
+  # doesn't run on Linux at all. See docs/GAMING-ARCHITECTURE.md.
   homelab.gaming = {
     enable = false;
     lanStreaming = true; # the one deliberate firewall hole in this config

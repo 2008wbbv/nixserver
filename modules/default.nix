@@ -8,6 +8,7 @@
     ./profiles/hardening.nix
     ./profiles/amdgpu.nix
     ./profiles/storage.nix
+    ./profiles/desktop.nix
 
     ./services/tailscale.nix
     ./services/dns.nix

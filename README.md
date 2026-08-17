@@ -29,9 +29,12 @@ hosts/vault/
   disks.nix                  declarative partitioning (destructive, opt-in)
 modules/
   options.nix                shared settings (domain, dataDir, admin)
-  profiles/                  base, hardening, amdgpu, storage
+  profiles/                  base, hardening, amdgpu, storage, desktop
   services/                  one file per capability, each `homelab.<x>.enable`
 secrets/README.md            how to set up sops
+docs/
+  INSTALL-DUALBOOT.md        shrinking Windows, two ESPs, the footguns
+  GAMING-ARCHITECTURE.md     server + PC + Game Pass on one box
 ```
 
 Turning a service on is one line in `hosts/vault/default.nix`. That file is
@@ -120,12 +123,17 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
   extra hop and WireGuard encryption actually cost you. Set
   `homelab.gaming.lanStreaming = false` to force it over the tailnet instead.
 - **RomM is the only container.** Everything else is a native NixOS module.
+- **GNOME, not dwm.** You use this machine occasionally, and occasional-use
+  machines want discoverable UIs rather than memorised keybindings. GNOME is
+  also the closest thing to the macOS feel you described. Switch with one line:
+  `homelab.desktop.environment = "plasma"`.
+- **Vulkan, not ROCm, for inference.** See below — this one is a correction.
 
 ## Hardware
 
 | | |
 |---|---|
-| GPU | RX 6750 XT — RDNA2, gfx1031, 12GB. ROCm needs `HSA_OVERRIDE_GFX_VERSION=10.3.0`, wired up in `profiles/amdgpu.nix`. H.264/HEVC encode; **no AV1 encode** (RDNA3+ only). |
+| GPU | RX 6750 XT — RDNA2, gfx1031, 12GB. Graphics stack is excellent; compute is not. See the driver note below. H.264/HEVC encode; **no AV1 encode** (RDNA3+ only). |
 | RAM | 33GB. ZFS ARC capped at 8GB so it doesn't fight Ollama for what spills out of VRAM. |
 | Disks | 2. One for root, one for a single-vdev data pool — a mirror needs a third disk. Backups are carrying the redundancy load until then. |
 | Boot | Dual-boots Windows (shrunk, kept for gaming). Disk 1 partitioned by hand; `disks.nix` is only safe to point at disk 2. See [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md). |
@@ -133,6 +141,26 @@ main reason to run NixOS for this rather than Debian and a pile of containers.
 Model sizing for 12GB: 8B at Q4 (~5GB) and 14B at Q4 (~9GB) stay GPU-resident.
 32B needs ~18GB and will spill to system RAM, where it drops to single-digit
 tokens/sec.
+
+### GPU driver status — correcting an earlier claim
+
+**Graphics: no caveats.** `amdgpu` is in-tree, Mesa RADV is mature on RDNA2,
+and this is one of the best-supported cards on Linux for gaming and VAAPI
+transcode.
+
+**Compute: messier than I first said.** I described the
+`HSA_OVERRIDE_GFX_VERSION=10.3.0` workaround as "standard and well-trodden,
+not a hack that might break." That was overconfident. It *is* the standard
+workaround — gfx1031 was never officially supported and the override borrows
+gfx1030's code path — but there's an active regression: **ROCm 6.4.3 and later
+segfault on gfx1031 the moment a model receives a prompt.** The reported fix is
+pinning to ROCm 6.4.1.
+
+So `homelab.amdgpu.computeBackend` now defaults to **`"vulkan"`**. llama.cpp's
+Vulkan backend needs no ROCm, rides the same Mesa stack that's already there
+for gaming, and doesn't care about AMD's support matrix. Slower than a working
+ROCm setup; considerably faster than one that crashes. Set it to `"rocm"` if
+you want to try — just verify with an actual prompt before building on it.
 
 ## On landchad.net
 
@@ -158,7 +186,9 @@ Fediverse and PeerTube are skipped — both only make sense federated and public
   US, which is ~10x more than you asked for. Draw the box at bboxfinder.com.
 - **"Crypto"** — full node (`nix-bitcoin` is the strong answer), Monero, or
   just wallet storage? The only item from the original list still unaddressed.
-- **Does your Proton library actually work?** Check protondb.com. If it does,
-  drop the dual-boot and the server stops going down when you game.
+- **What CPU?** This is now the biggest open question. Whether it has an
+  integrated GPU decides if "Windows in a VM so the server never reboots" is a
+  clean afternoon or a fiddly weekend. See
+  [docs/GAMING-ARCHITECTURE.md](docs/GAMING-ARCHITECTURE.md).
 - **Disk sizes** — needed to say how much to leave Windows and whether the data
   pool is worth ZFS at all.

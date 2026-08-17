@@ -16,6 +16,19 @@ in
           RDNA2 (6600/6700/6800/6900) -> "10.3.0"
           RDNA3 (7600/7700/7800/7900) -> "11.0.0"
         Leave null if your card is officially supported.
+
+        READ THE ROCm NOTE IN THIS FILE BEFORE RELYING ON THIS.
+      '';
+    };
+
+    computeBackend = lib.mkOption {
+      type = lib.types.enum [ "rocm" "vulkan" ];
+      default = "vulkan";
+      description = ''
+        Which compute backend local inference should use. See the long note
+        below — the short version is that Vulkan is the lower-risk default on
+        a gfx1031 card right now, and ROCm is the higher-ceiling option if it
+        happens to work on your ROCm version.
       '';
     };
   };
@@ -36,7 +49,8 @@ in
     # ROCm expects its libraries at /opt/rocm. Nix puts them in the store, so
     # symlink the path ROCm hardcodes. Without this, hipBLAS silently falls back
     # to CPU and you spend an evening wondering why inference is slow.
-    systemd.tmpfiles.rules = [
+    # Only needed on the ROCm path; Vulkan doesn't care.
+    systemd.tmpfiles.rules = lib.optionals (cfg.computeBackend == "rocm") [
       "L+ /opt/rocm - - - - ${pkgs.rocmPackages.clr}"
     ];
 
@@ -61,11 +75,42 @@ in
     #           RDNA3 (7000-series). If Jellyfin looks like it's offering
     #           AV1 encode, don't enable it; you'll get silent CPU fallback.
     #
-    # Compute (ROCm), for Ollama:
+    # Compute:
     #   12GB VRAM is a comfortable 8B-at-Q4 card and a workable 14B-at-Q4 one.
     #   A 32B model at Q4 needs ~18GB and will spill to system RAM, where it
     #   runs at single-digit tokens/sec. Stay at or under 14B for GPU-resident
     #   speed.
+    #
+    # ROCm on gfx1031 — CORRECTING WHAT I TOLD YOU EARLIER:
+    #
+    #   I said the 10.3.0 override was "standard and well-trodden, not a hack
+    #   that might break". That was too confident. Checking current status:
+    #   it IS the standard workaround, but there's an active regression.
+    #   ROCm 6.4.3 and later have shipped builds where gfx1031 with
+    #   HSA_OVERRIDE_GFX_VERSION=10.3.0 loads a model fine and then segfaults
+    #   the moment it receives a prompt. The reported fix is pinning to
+    #   ROCm 6.4.1.
+    #
+    #   The underlying situation hasn't changed: AMD never officially
+    #   supported gfx1031, the override borrows gfx1030's code path, and it
+    #   can break on any ROCm point release. It's a community workaround, not
+    #   a supported configuration.
+    #
+    #   So: `computeBackend = "vulkan"` is the default in this config.
+    #   llama.cpp's Vulkan backend needs no ROCm at all, runs on the same
+    #   Mesa driver stack that's already there for gaming, and doesn't care
+    #   what AMD's support matrix says. It's somewhat slower than a working
+    #   ROCm setup, but "somewhat slower" beats "segfaults on prompt".
+    #
+    #   Try ROCm if you want the extra speed — just verify it before you
+    #   build anything on top of it:
+    #     rocminfo | grep gfx          # should show gfx1031
+    #     ollama run qwen3:8b "hi"     # the prompt is where it crashes
+    #
+    # The graphics stack, by contrast, is genuinely solid and needs no
+    # caveats: amdgpu is in-tree, Mesa RADV is mature on RDNA2, and this is
+    # one of the best-supported cards on Linux for gaming. The ROCm mess is
+    # specific to compute.
     #
     # Contention warning:
     #   Both of the above share those same 12GB. An 8B model resident is ~5GB;
