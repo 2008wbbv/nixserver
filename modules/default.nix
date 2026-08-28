@@ -12,6 +12,7 @@
     ./profiles/resilience.nix
     ./profiles/apps.nix
     ./profiles/yubikey.nix
+    ./profiles/power.nix
 
     ./services/tailscale.nix
     ./services/dns.nix

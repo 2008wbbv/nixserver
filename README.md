@@ -33,7 +33,7 @@ hosts/vault/
 modules/
   options.nix                shared settings (domain, dataDir, admin)
   profiles/                  base, hardening, amdgpu, storage, desktop,
-                             resilience, apps, yubikey
+                             resilience, apps, yubikey, power
   services/                  one file per capability, each `homelab.<x>.enable`
 secrets/README.md            how to set up sops
 docs/

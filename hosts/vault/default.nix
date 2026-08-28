@@ -111,6 +111,16 @@
     helium = false; # community flake, not nixpkgs — read the note first
   };
 
+  # Idle power tuning. ~70W idle is roughly $6-15/month depending on your
+  # rate; this trims maybe 10-20% of that. See the module for the full budget
+  # and the levers that matter.
+  homelab.power = {
+    enable = true;
+    # BIOS ASPM first — this overrides firmware judgement and can cause NVMe
+    # dropouts on some boards. Only if the BIOS doesn't expose the setting.
+    aggressivePcie = false;
+  };
+
   homelab.yubikey = {
     enable = true;
     # PAM lockout risk. Register two keys and keep a root shell open when you
