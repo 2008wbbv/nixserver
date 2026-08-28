@@ -14,6 +14,8 @@ in
     # nftables rule below — no telemetry, no update checks. Inbound from the
     # tailnet still works. Most "isolated printer" setups skip that half.
 
+    homelab.stack.groups.printer = [ "klipper" "moonraker" ];
+
     services.klipper = {
       enable = true;
       user = "klipper";

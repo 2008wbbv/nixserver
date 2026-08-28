@@ -26,6 +26,14 @@ update:
     nix flake update
     sudo nixos-rebuild build --flake .#vault
 
+# Health check: failed units, network, disk, backups, boot entry.
+doctor:
+    @doctor
+
+# Service groups: what's running.
+stack:
+    @stack
+
 # What's running, what failed.
 status:
     @systemctl --failed --no-pager || true

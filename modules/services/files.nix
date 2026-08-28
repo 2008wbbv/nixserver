@@ -19,6 +19,8 @@ in
     #
     # SMB1 is off, signing is required, guest access is off.
     #########################################################################
+    homelab.stack.groups.files = [ "samba-smbd" "syncthing" ];
+
     services.samba = {
       enable = true;
       openFirewall = false;

@@ -35,6 +35,10 @@ in
     # Gaming Runtime don't work under Proton. That's the platform, not
     # individual titles. Game Pass stays in Windows.
 
+    homelab.stack.groups.gaming =
+      lib.optional cfg.streaming "sunshine"
+      ++ lib.optional cfg.romm "podman-romm";
+
     programs.steam = {
       enable = true;
       gamescopeSession.enable = true;

@@ -17,6 +17,8 @@ in
     # regardless of the SOCKS proxy, and exit operators get the abuse reports.
     # I2P (anonymity.nix) is where anonymous torrenting belongs.
 
+    homelab.stack.groups.downloads = [ "transmission" ];
+
     vpnNamespaces.wg = {
       enable = true;
 

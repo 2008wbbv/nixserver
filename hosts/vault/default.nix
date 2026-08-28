@@ -128,6 +128,17 @@
     sudoUnlock = false;
   };
 
+  # Push notifications to your phone. Closes the gap where alerts went to a
+  # Grafana nobody opens. Daily digest at 09:00 so silence means "fine", not
+  # "the notifier is broken".
+  homelab.notify = {
+    enable = true;
+    topic = "vault-alerts"; # TODO: change to something only you would guess
+  };
+
+  # Landing page at home.lab.internal, generated from proxy.routes.
+  homelab.dashboard.enable = true;
+
   # --- Tier 3b: landchad-flavoured selfhosting --------------------------------
   homelab.selfhost = {
     forgejo = false; # git hosting — worth it just to own this repo

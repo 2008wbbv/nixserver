@@ -15,6 +15,9 @@
     ./profiles/power.nix
     ./profiles/shell.nix
 
+    ./services/stack.nix
+    ./services/notify.nix
+    ./services/dashboard.nix
     ./services/tailscale.nix
     ./services/dns.nix
     ./services/proxy.nix

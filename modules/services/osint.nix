@@ -14,6 +14,8 @@ in
     #   2. Results are unverified aggregation. Username collisions across
     #      platforms are the dominant false positive. Leads, not findings.
 
+    homelab.stack.groups.osint = [ "spiderfoot" ];
+
     # SpiderFoot is flagged insecure in nixpkgs (unpatched CVEs in its
     # dependency tree). Your existing config allowlists it too — without this
     # the build fails outright rather than warning.

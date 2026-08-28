@@ -27,6 +27,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    homelab.stack.groups.media =
+      [ "jellyfin" "audiobookshelf" ]
+      ++ lib.optional cfg.navidrome "navidrome";
+
     users.groups.media = { };
 
     services.jellyfin = {

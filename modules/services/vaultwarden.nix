@@ -22,6 +22,8 @@ in
     # it. For autofill quality and shared entries, (a) wins. They coexist fine.
     #########################################################################
 
+    homelab.stack.groups.vault = [ "vaultwarden" ];
+
     services.vaultwarden = {
       enable = true;
       dbBackend = "sqlite";

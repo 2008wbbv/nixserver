@@ -117,6 +117,8 @@ in
     #
     # Not an exit node. Exit traffic points abuse complaints at your home line.
 
+    homelab.stack.groups.privacy = [ "tor" "i2pd" ];
+
     services.tor = {
       enable = true;
       client = {

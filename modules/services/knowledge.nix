@@ -12,6 +12,10 @@ in
     #########################################################################
     # SearXNG — metasearch with no logging and no per-user profile.
     #########################################################################
+    homelab.stack.groups.knowledge = [
+      "searx" "phpfpm-freshrss" "nginx" "kiwix-serve" "calibre-web"
+    ];
+
     services.searx = {
       enable = true;
       package = pkgs.searxng;

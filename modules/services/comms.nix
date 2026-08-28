@@ -22,6 +22,8 @@ in
     # later needs the VPS-front arrangement, not a config flag.
     #########################################################################
 
+    homelab.stack.groups.comms = [ "matrix-synapse" "prosody" "postgresql" ];
+
     services.postgresql = {
       enable = true;
       # Synapse requires C collation. Getting this wrong means a broken

@@ -35,6 +35,8 @@ modules/
   profiles/                  base, hardening, amdgpu, storage, desktop,
                              resilience, apps, yubikey, power, shell
   services/                  one file per capability, each `homelab.<x>.enable`
+                             plus stack (group toggles), notify (ntfy),
+                             dashboard (landing page)
 secrets/README.md            how to set up sops
 docs/
   INSTALL-DUALBOOT.md        disk space, partitioning, the Windows footguns
@@ -91,6 +93,22 @@ different IPs, before relying on either.
 **Tier 4 — needs hardware attached.**
 `printer` (USB), `gaming` (dummy HDMI plug; the TV already has Moonlight and
 Steam Link).
+
+## Day-to-day commands
+
+```
+stack                     every service group, and whether it's running
+stack stop ai privacy     stop now (returns on reboot)
+stack disable ai          stop AND don't start at boot
+stack list                which units are in each group
+
+doctor                    failed units, network, disk, backups, boot entry
+notify -p high "text"     push to your phone
+```
+
+`stack` changes what's RUNNING. The `homelab.<x>.enable` flags change what's
+INSTALLED and need a rebuild. `core` (sshd, tailscaled, DNS, Caddy) is
+protected — stopping it from an SSH session would be the last thing you did.
 
 ## Deploying
 

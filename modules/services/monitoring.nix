@@ -6,6 +6,10 @@ in
   options.homelab.monitoring.enable = lib.mkEnableOption "Prometheus + Grafana + Loki";
 
   config = lib.mkIf cfg.enable {
+    homelab.stack.groups.monitoring = [
+      "prometheus" "grafana" "loki" "promtail"
+    ];
+
     services.prometheus = {
       enable = true;
       listenAddress = "127.0.0.1";

@@ -45,6 +45,8 @@ in
       # Worth having primarily so this repo lives somewhere you control. A
       # config repo that only exists on GitHub is a config repo you can't
       # reach when your network is down — which is exactly when you need it.
+      homelab.stack.groups.git = [ "forgejo" ];
+
       services.forgejo = {
         enable = true;
         database.type = "sqlite3";
@@ -79,6 +81,8 @@ in
       # If you ONLY want file sync, don't run this — Syncthing already does
       # that better and with a fraction of the moving parts. Nextcloud earns
       # its keep through calendar, contacts, and sharing links.
+      homelab.stack.groups.cloud = [ "phpfpm-nextcloud" "nginx" ];
+
       services.nextcloud = {
         enable = true;
         package = pkgs.nextcloud31; # TODO: match your nixpkgs; it pins majors

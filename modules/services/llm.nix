@@ -11,6 +11,8 @@ in
       message = "homelab.llm requires homelab.amdgpu.enable = true (or edit acceleration below for CPU-only).";
     }];
 
+    homelab.stack.groups.ai = [ "ollama" "open-webui" ];
+
     services.ollama = {
       enable = true;
       # Ollama is ROCm-or-CPU. When the backend is "vulkan" we leave Ollama
