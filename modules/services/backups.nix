@@ -25,6 +25,15 @@ in
     #   - Best: both. That's the "3-2-1" everyone quotes.
     #########################################################################
 
+    assertions = [{
+      assertion = config.homelab.secrets.enable;
+      message = ''
+        homelab.backups needs secrets, but homelab.secrets.enable is false.
+        Follow secrets/README.md, then set homelab.secrets.enable = true.
+        Needs: restic/password, restic/env
+      '';
+    }];
+
     services.restic.backups = {
       offsite = {
         initialize = true;

@@ -24,6 +24,15 @@ in
 
     homelab.stack.groups.vault = [ "vaultwarden" ];
 
+    assertions = [{
+      assertion = config.homelab.secrets.enable;
+      message = ''
+        homelab.vaultwarden needs secrets, but homelab.secrets.enable is false.
+        Follow secrets/README.md, then set homelab.secrets.enable = true.
+        Needs: vaultwarden/env
+      '';
+    }];
+
     services.vaultwarden = {
       enable = true;
       dbBackend = "sqlite";

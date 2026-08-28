@@ -58,7 +58,9 @@
   homelab.storage.enable = false; # TODO: ZFS pool. Read the file first.
   homelab.files.enable = true; # Samba + Syncthing
   homelab.vaultwarden.enable = false; # password manager
-  homelab.knowledge.enable = true; # SearXNG + FreshRSS + Kiwix + books
+  # Off until secrets exist — SearXNG and FreshRSS both need one, and the
+  # first install deliberately runs with no secrets at all.
+  homelab.knowledge.enable = false; # SearXNG + FreshRSS + Kiwix + books
 
   homelab.media = {
     enable = true; # Jellyfin + Audiobookshelf

@@ -26,7 +26,7 @@ let
         esac
       done
       shift $((OPTIND - 1))
-      msg="''${*:-（no message)}"
+      msg="''${*:-(no message)}"
       curl -fsS \
         -H "Title: $title" \
         -H "Priority: $prio" \
@@ -72,22 +72,42 @@ in
 
     environment.systemPackages = [ notify ];
 
-    # Generic failure handler. Any unit with `OnFailure=notify@%n.service`
-    # pushes a notification naming itself and the last few log lines.
-    systemd.services."notify@" = {
-      description = "Push a notification about failed unit %i";
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = pkgs.writeShellScript "notify-failure" ''
-          UNIT="$1"
-          LOG=$(${pkgs.systemd}/bin/journalctl -u "$UNIT" -n 8 --no-pager -o cat || true)
-          ${notify}/bin/notify -p high -t "FAILED: $UNIT" "$LOG"
-        '' + " %i";
-      };
-    };
-
-    # Attach it to the things whose silent failure would actually cost you.
     systemd.services = lib.mkMerge [
+      {
+        # Generic failure handler. Any unit with
+        # `OnFailure=notify@%n.service` pushes a notification naming itself
+        # and its last few log lines.
+        "notify@" = {
+          description = "Push a notification about failed unit %i";
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = "${pkgs.writeShellScript "notify-failure" ''
+              UNIT="$1"
+              LOG=$(${pkgs.systemd}/bin/journalctl -u "$UNIT" -n 8 --no-pager -o cat || true)
+              ${notify}/bin/notify -p high -t "FAILED: $UNIT" "$LOG"
+            ''} %i";
+          };
+        };
+
+        # Daily digest, so silence means "checked and fine" rather than "the
+        # notifier itself is broken".
+        daily-digest = {
+          description = "Daily health summary";
+          serviceConfig.Type = "oneshot";
+          script = ''
+            FAILED=$(${pkgs.systemd}/bin/systemctl --failed --no-legend --plain | ${pkgs.coreutils}/bin/wc -l)
+            DISK=$(${pkgs.coreutils}/bin/df -h / | ${pkgs.gawk}/bin/awk 'NR==2{print $5" used, "$4" free"}')
+            UP=$(${pkgs.procps}/bin/uptime -p)
+            if [ "$FAILED" -gt 0 ]; then
+              ${notify}/bin/notify -p high -t "vault: $FAILED failed" "$DISK - $UP"
+            else
+              ${notify}/bin/notify -p min -t "vault ok" "$DISK - $UP"
+            fi
+          '';
+        };
+      }
+
+      # Attach the handler to the units whose silent failure actually costs you.
       (lib.mkIf config.homelab.backups.enable {
         "restic-backups-offsite".onFailure = [ "notify@restic-backups-offsite.service" ];
       })
@@ -102,28 +122,6 @@ in
         "zpool-scrub".onFailure = [ "notify@zpool-scrub.service" ];
       })
     ];
-
-    # ZFS pool degradation — the one that matters most and is easiest to miss.
-    services.zfs.zed.settings = lib.mkIf config.homelab.storage.enable {
-      ZED_NOTIFY_VERBOSE = true;
-    };
-
-    # Daily digest, so silence means "checked and fine" rather than
-    # "the notifier itself is broken".
-    systemd.services.daily-digest = {
-      description = "Daily health summary";
-      serviceConfig.Type = "oneshot";
-      script = ''
-        FAILED=$(${pkgs.systemd}/bin/systemctl --failed --no-legend --plain | wc -l)
-        DISK=$(${pkgs.coreutils}/bin/df -h / | ${pkgs.gawk}/bin/awk 'NR==2{print $5" used, "$4" free"}')
-        UP=$(${pkgs.coreutils}/bin/uptime -p)
-        if [ "$FAILED" -gt 0 ]; then
-          ${notify}/bin/notify -p high -t "vault: $FAILED failed" "$DISK — $UP"
-        else
-          ${notify}/bin/notify -p min -t "vault ok" "$DISK — $UP"
-        fi
-      '';
-    };
 
     systemd.timers.daily-digest = {
       wantedBy = [ "timers.target" ];

@@ -16,6 +16,15 @@ in
       "searx" "phpfpm-freshrss" "nginx" "kiwix-serve" "calibre-web"
     ];
 
+    assertions = [{
+      assertion = config.homelab.secrets.enable;
+      message = ''
+        homelab.knowledge needs secrets, but homelab.secrets.enable is false.
+        Follow secrets/README.md, then set homelab.secrets.enable = true.
+        Needs: searx/env, freshrss/password
+      '';
+    }];
+
     services.searx = {
       enable = true;
       package = pkgs.searxng;

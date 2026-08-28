@@ -1,185 +1,115 @@
 { config, lib, pkgs, ... }:
 
-# Designed for a machine that gets rebooted into Windows regularly and must
-# come back clean, unattended, every time.
+# For a machine that gets rebooted into Windows regularly and must come back
+# clean, unattended, every time.
 #
-# The difference between this and a 24/7 server is not reliability tricks —
-# it's that "missed while powered off" becomes the normal case rather than an
-# exception. Scheduled work has to catch up, services have to not care that
-# they were killed mid-flight, and nothing may require you to be present.
+# The difference from a 24/7 server is that "missed while powered off" is the
+# normal case rather than an exception: scheduled work has to catch up,
+# services must not care that they were killed mid-flight, and nothing may
+# require you to be present.
+#
+# The most important thing here isn't in this file: NixOS must stay the DEFAULT
+# systemd-boot entry. If Windows is default, an unattended reboot leaves the
+# server down until you walk over to it. Check with `bootctl status`, and don't
+# press 'd' in the boot menu with Windows selected.
 
+let
+  # Applied to services whose one-off failure would otherwise go unnoticed for
+  # days. StartLimit keeps a genuinely broken unit from thrashing forever.
+  retry = {
+    serviceConfig = {
+      Restart = lib.mkDefault "on-failure";
+      RestartSec = lib.mkDefault "10s";
+    };
+    startLimitIntervalSec = 300;
+    startLimitBurst = 5;
+  };
+
+  # Only ever name units that actually exist — referencing a missing one
+  # creates a broken unit rather than an error you'd notice.
+  whenEnabled = cond: names: lib.mkIf cond (lib.genAttrs names (_: retry));
+in
 {
-  #############################################################################
-  # 1. Come back to the SERVER, not to Windows
-  #
-  # The most important line in this file. If anything reboots the machine
-  # unattended — a watchdog, a power blip with BIOS auto-power-on, a kernel
-  # panic — it has to land in NixOS. If Windows is the default boot entry,
-  # an unattended reboot leaves the server down until you physically walk
-  # over and pick from a menu.
-  #
-  # NixOS writes itself as the systemd-boot default, so this normally just
-  # works. Verify after install:
-  #     bootctl status | grep -i default
-  # And do NOT press 'd' in the boot menu while Windows is selected — that
-  # makes Windows sticky.
-  #############################################################################
-
-  #############################################################################
-  # 2. Catch up on everything missed while powered off
-  #
-  # Persistent=true means "if the machine was off when this should have run,
-  # run it shortly after next boot". Without it, a backup scheduled for 02:00
-  # simply never happens on any day you were gaming at 02:00 — silently.
-  #
-  # This is the single highest-value setting for your usage pattern.
-  #############################################################################
+  # Catch up on everything missed while powered off. Without Persistent, a
+  # backup scheduled for 02:00 simply never runs on any night you were gaming
+  # — silently. This is the highest-value setting in the file.
   systemd.timers = lib.mkMerge [
-    (lib.mkIf config.nix.gc.automatic {
-      nix-gc.timerConfig.Persistent = true;
-    })
-    (lib.mkIf config.services.fstrim.enable {
-      fstrim.timerConfig.Persistent = true;
-    })
-    (lib.mkIf config.system.autoUpgrade.enable {
-      nixos-upgrade.timerConfig.Persistent = true;
-    })
-    (lib.mkIf config.homelab.storage.enable {
-      # ZFS scrub. Monthly on a box that's off half the time otherwise means
-      # "roughly never".
-      zpool-scrub.timerConfig.Persistent = true;
-    })
+    (lib.mkIf config.nix.gc.automatic { nix-gc.timerConfig.Persistent = true; })
+    (lib.mkIf config.services.fstrim.enable { fstrim.timerConfig.Persistent = true; })
+    (lib.mkIf config.system.autoUpgrade.enable { nixos-upgrade.timerConfig.Persistent = true; })
+    (lib.mkIf config.homelab.storage.enable { zpool-scrub.timerConfig.Persistent = true; })
   ];
 
-  #############################################################################
-  # 3. Services retry instead of giving up
-  #
-  # The failure mode this prevents: a service starts before the network or a
-  # mount is ready, fails once, and stays dead until you notice days later.
-  # StartLimit* keeps a genuinely broken service from thrashing forever.
-  #############################################################################
-  systemd.services =
-    let
-      retry = {
-        serviceConfig = {
-          Restart = lib.mkDefault "on-failure";
-          RestartSec = lib.mkDefault "10s";
-        };
-        startLimitIntervalSec = 300;
-        startLimitBurst = 5;
-      };
-      # Only services that are actually defined — referencing a unit that
-      # doesn't exist creates a broken one.
-      whenEnabled = cond: names:
-        lib.mkIf cond (lib.genAttrs names (_: retry));
-    in
-    lib.mkMerge [
-      (whenEnabled config.homelab.dns.enable [ "adguardhome" "unbound" ])
-      (whenEnabled config.homelab.proxy.enable [ "caddy" ])
-      (whenEnabled config.homelab.vaultwarden.enable [ "vaultwarden" ])
-      (whenEnabled config.homelab.media.enable [ "jellyfin" ])
-      (whenEnabled config.homelab.monitoring.enable [ "prometheus" "grafana" "loki" ])
-      (whenEnabled config.homelab.llm.enable [ "ollama" ])
-    ];
+  systemd.services = lib.mkMerge [
+    (whenEnabled config.homelab.dns.enable [ "adguardhome" "unbound" ])
+    (whenEnabled config.homelab.proxy.enable [ "caddy" ])
+    (whenEnabled config.homelab.vaultwarden.enable [ "vaultwarden" ])
+    (whenEnabled config.homelab.media.enable [ "jellyfin" ])
+    (whenEnabled config.homelab.monitoring.enable [ "prometheus" "grafana" "loki" ])
+    (whenEnabled config.homelab.llm.enable [ "ollama" ])
 
-  #############################################################################
-  # 4. Wait for the network to actually be up
-  #
-  # "Network is configured" and "network works" are different moments. Things
-  # that dial out on startup need the second one.
-  #############################################################################
-  systemd.services.tailscaled = lib.mkIf config.homelab.tailscale.enable {
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
-  };
+    {
+      # "Network configured" and "network works" are different moments.
+      tailscaled = lib.mkIf config.homelab.tailscale.enable {
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+      };
+
+      # Two minutes after boot, once things have settled, log a loud summary of
+      # anything that failed. Means `journalctl -b` answers "why didn't it come
+      # up" without Grafana needing to be the thing that's working.
+      boot-health-check = {
+        description = "Report units that failed to start after boot";
+        after = [ "multi-user.target" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStartPre = "${pkgs.coreutils}/bin/sleep 120";
+        };
+        script = ''
+          failed=$(${pkgs.systemd}/bin/systemctl --failed --no-legend --plain \
+                   | ${pkgs.gawk}/bin/awk '{print $1}')
+          if [ -n "$failed" ]; then
+            {
+              echo "BOOT HEALTH: these units failed to start:"
+              echo "$failed"
+            } | ${pkgs.systemd}/bin/systemd-cat -p err -t boot-health
+          else
+            echo "BOOT HEALTH: all units started cleanly" \
+              | ${pkgs.systemd}/bin/systemd-cat -p info -t boot-health
+          fi
+        '';
+      };
+    }
+  ];
+
   systemd.network.wait-online.anyInterface = true;
 
-  #############################################################################
-  # 5. Hardware watchdog
-  #
-  # If the kernel wedges hard enough that systemd stops petting the watchdog,
-  # the board resets the machine. Your Z690-class board has an Intel TCO
-  # watchdog, so this needs no extra hardware.
-  #
-  # Without it, a hang means the server is down until you're physically there.
-  # With it, it's down for 90 seconds.
-  #############################################################################
+  # If the kernel wedges hard enough that systemd stops petting it, the board
+  # resets the machine. Your Z690-class board has an Intel TCO watchdog, so
+  # this needs no extra hardware. Turns "down until someone is physically
+  # there" into "down for 90 seconds".
   systemd.watchdog = {
     runtimeTime = "30s";
     rebootTime = "10min";
   };
 
-  #############################################################################
-  # 6. Keep logs across reboots
-  #
-  # Default journald config on many systems is volatile — reboot and the
-  # evidence of why something failed is gone. Since every debugging session
-  # here starts with "it was fine when I left it", persist them.
-  #
+  # Every debugging session here starts after a reboot has already discarded
+  # the evidence. `lines` type, so this merges with base.nix's SystemMaxUse.
   #   journalctl -b -1 -p err     # errors from the previous boot
-  #############################################################################
-  # extraConfig is a `lines` type, so this merges with the SystemMaxUse setting
-  # in base.nix rather than conflicting with it.
   services.journald.extraConfig = "Storage=persistent";
 
-  #############################################################################
-  # 7. Tell me what didn't come up
-  #
-  # Runs a couple of minutes after boot, once things have settled, and logs a
-  # loud summary of any failed unit. Prometheus alerts on it too (see
-  # monitoring.nix), but this means the answer is in `journalctl -b` without
-  # needing Grafana to be the thing that's working.
-  #############################################################################
-  systemd.services.boot-health-check = {
-    description = "Report units that failed to start after boot";
-    after = [ "multi-user.target" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStartPre = "${pkgs.coreutils}/bin/sleep 120";
-    };
-    script = ''
-      failed=$(${pkgs.systemd}/bin/systemctl --failed --no-legend --plain | ${pkgs.gawk}/bin/awk '{print $1}')
-      if [ -n "$failed" ]; then
-        echo "BOOT HEALTH: the following units failed to start:" \
-          | ${pkgs.systemd}/bin/systemd-cat -p err -t boot-health
-        echo "$failed" | ${pkgs.systemd}/bin/systemd-cat -p err -t boot-health
-      else
-        echo "BOOT HEALTH: all units started cleanly" \
-          | ${pkgs.systemd}/bin/systemd-cat -p info -t boot-health
-      fi
-    '';
-  };
-
-  #############################################################################
-  # 8. Wake-on-LAN
-  #
-  # Lets you power the box on remotely instead of walking to it — useful when
-  # you shut down into Windows, then leave, then want Jellyfin.
-  #
-  #   wakeonlan <mac>        from any machine on the LAN
-  #
-  # Also enable "Wake on Magic Packet" / "ErP off" in BIOS, and turn on
-  # "Restore on AC Power Loss" while you're in there so a power blip brings
-  # the machine back rather than leaving it off.
-  #############################################################################
+  # Power the box on remotely instead of walking to it. Also enable "Wake on
+  # Magic Packet" and "Restore on AC Power Loss" in BIOS.
+  #   wakeonlan <mac>
   systemd.network.links."10-wol" = {
     matchConfig.Type = "ether";
     linkConfig.WakeOnLan = "magic";
   };
 
-  #############################################################################
-  # 9. Databases survive being killed
-  #
-  # You will hard-power-off this machine at some point. SQLite in WAL mode and
-  # Postgres both handle that correctly — but only if they're not running with
-  # fsync disabled, which nothing here does. The real risk is ZFS/btrfs, and
-  # both are copy-on-write, so an interrupted write leaves the previous
-  # consistent state rather than a torn one.
-  #
-  # In other words: this is already fine. Noted so you don't go looking for a
-  # problem that isn't there.
-  #############################################################################
+  environment.systemPackages = [ pkgs.wakeonlan ];
 
-  environment.systemPackages = with pkgs; [ wakeonlan ];
+  # On hard power-off: SQLite in WAL mode and Postgres both recover correctly,
+  # and ZFS/btrfs are copy-on-write so an interrupted write leaves the previous
+  # consistent state. Nothing to do — noted so you don't go looking.
 }

@@ -81,6 +81,15 @@ in
       # If you ONLY want file sync, don't run this — Syncthing already does
       # that better and with a fraction of the moving parts. Nextcloud earns
       # its keep through calendar, contacts, and sharing links.
+      assertions = [{
+        assertion = config.homelab.secrets.enable;
+        message = ''
+          homelab.selfhost.nextcloud needs secrets, but homelab.secrets.enable
+          is false. Follow secrets/README.md, then set it to true.
+          Needs: nextcloud/adminpass
+        '';
+      }];
+
       homelab.stack.groups.cloud = [ "phpfpm-nextcloud" "nginx" ];
 
       services.nextcloud = {

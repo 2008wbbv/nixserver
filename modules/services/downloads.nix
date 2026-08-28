@@ -19,6 +19,15 @@ in
 
     homelab.stack.groups.downloads = [ "transmission" ];
 
+    assertions = [{
+      assertion = config.homelab.secrets.enable;
+      message = ''
+        homelab.downloads needs secrets, but homelab.secrets.enable is false.
+        Follow secrets/README.md, then set homelab.secrets.enable = true.
+        Needs: wireguard/torrent
+      '';
+    }];
+
     vpnNamespaces.wg = {
       enable = true;
 
