@@ -26,6 +26,10 @@
     # Where bulk data lives. Set once, every service derives from it.
     dataDir = "/srv";
 
+    # Flip to true only AFTER following secrets/README.md on the installed
+    # machine. Nothing in tier 1 needs it.
+    secrets.enable = false;
+
     # Your admin account.
     admin = {
       name = "ben";

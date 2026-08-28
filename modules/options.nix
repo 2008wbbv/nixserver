@@ -22,6 +22,20 @@ in
       description = "Root of bulk data. Services derive their paths from this.";
     };
 
+    secrets.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Whether secrets/secrets.yaml exists and is decryptable by this host.
+
+        Leave false for the very first install. sops-nix decrypts using the
+        host's SSH key, which does not exist until the machine is installed —
+        so requiring secrets to build would be a chicken-and-egg you could not
+        get out of. Every module that needs a secret is off by default; turn
+        this on once you've followed secrets/README.md, then enable them.
+      '';
+    };
+
     admin = {
       name = mkOption {
         type = types.str;

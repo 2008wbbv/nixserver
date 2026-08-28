@@ -8,10 +8,16 @@ in
   config = lib.mkIf cfg.enable {
     services.tailscale = {
       enable = true;
-      # Non-interactive enrolment. Generate a reusable, pre-authorized key in the
-      # Tailscale admin console and put it in secrets/secrets.yaml under
-      # `tailscale/authkey`. Without this you must run `tailscale up` by hand once.
-      authKeyFile = config.sops.secrets."tailscale/authkey".path;
+
+      # Only wired up once secrets exist. On a fresh install you enrol by hand:
+      #
+      #     sudo tailscale up --ssh --advertise-exit-node
+      #
+      # ...which prints a URL to open. That is a one-time thing and the node
+      # stays enrolled across rebuilds, so the auth key is a convenience for
+      # rebuilding from scratch rather than a requirement.
+      authKeyFile = lib.mkIf config.homelab.secrets.enable
+        config.sops.secrets."tailscale/authkey".path;
 
       # Advertise this box as the exit node + subnet router for the LAN, so your
       # phone can route through home. Approve both in the admin console.
@@ -22,7 +28,8 @@ in
       ];
     };
 
-    sops.secrets."tailscale/authkey" = { };
+    sops.secrets."tailscale/authkey" =
+      lib.mkIf config.homelab.secrets.enable { };
 
     # Required for exit-node / subnet-router use.
     boot.kernel.sysctl = {

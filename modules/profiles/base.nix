@@ -102,7 +102,9 @@ in
   # these files. sops-nix decrypts at activation using this host's SSH host key,
   # so the encrypted blobs are safe to commit. See docs/SECRETS.md.
   #############################################################################
-  sops = {
+  # Gated: pointing defaultSopsFile at a file that doesn't exist yet fails
+  # evaluation, which would make the first install impossible.
+  sops = lib.mkIf cfg.secrets.enable {
     defaultSopsFile = ../../secrets/secrets.yaml;
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
   };

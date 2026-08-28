@@ -3,6 +3,8 @@
 One desktop PC, converted into a self-hosted server. Reachable over Tailscale
 and nothing else.
 
+**→ [SETUP.md](SETUP.md) is the step-by-step walkthrough. Start there.**
+
 **Status: scaffold.** None of this has been built or evaluated — there is no
 Nix toolchain in the environment it was written in. Expect to fix option names
 and typos on the first `nixos-rebuild`. Everything marked `TODO` or `CHANGE-ME`
@@ -21,6 +23,7 @@ switch, VLANs slot in underneath all of this and none of it gets thrown away.
 ## Layout
 
 ```
+SETUP.md                     the walkthrough — start here
 flake.nix                    inputs + the single host output
 .sops.yaml                   which keys can decrypt secrets
 hosts/vault/
