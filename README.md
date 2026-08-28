@@ -33,13 +33,14 @@ hosts/vault/
 modules/
   options.nix                shared settings (domain, dataDir, admin)
   profiles/                  base, hardening, amdgpu, storage, desktop,
-                             resilience
+                             resilience, apps, yubikey
   services/                  one file per capability, each `homelab.<x>.enable`
 secrets/README.md            how to set up sops
 docs/
   INSTALL-DUALBOOT.md        disk space, partitioning, the Windows footguns
   GAMING-ARCHITECTURE.md     server + PC + Game Pass on one box
   MIGRATING-FROM-WINDOWS.md  exporting your program list, nixpkgs equivalents
+  SERVICES.md                every service and app, what it is, what port
 scripts/
   disk-report.ps1              what's eating your disks, and what to delete
   export-windows-programs.ps1  run this in Windows first

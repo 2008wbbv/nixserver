@@ -12,7 +12,15 @@ let
 in
 {
   options.homelab.gaming = {
-    enable = lib.mkEnableOption "Steam + Sunshine game streaming to the TV";
+    enable = lib.mkEnableOption "Steam, Proton, and gamescope for playing at the machine";
+
+    streaming = lib.mkEnableOption ''
+      Sunshine, for streaming to the TV's Moonlight client.
+
+      Split from `enable` because you want Steam whether or not you ever
+      stream — playing at the desk needs none of the Sunshine machinery, and
+      Sunshine is the part that needs a dummy HDMI plug.
+    '';
 
     lanStreaming = lib.mkOption {
       type = lib.types.bool;
@@ -48,24 +56,17 @@ in
 
   config = lib.mkIf cfg.enable {
     #########################################################################
-    # The architecture, and why it's better than what you're planning
+    # Two separate things, hence two flags:
     #
-    # You're currently set up to dual-boot into Windows to game, which takes
-    # the whole server down — including DNS for your entire network. This
-    # replaces that:
+    #   enable      Steam + Proton + gamescope, for playing AT the machine.
+    #               No extra hardware, nothing to configure.
+    #   streaming   Sunshine, for playing on the TV via its Moonlight client.
+    #               Needs a dummy HDMI plug. See below.
     #
-    #     TV ──HDMI── [client box] ──network── this server
-    #                  Moonlight              Sunshine + Steam/Proton
-    #
-    # Games run here, on the 6750 XT. The GPU encodes the frames in hardware,
-    # ships them over the network, and the client decodes and displays them.
-    # Your controller input goes back the other way. The server never reboots,
-    # nothing else goes down, and the TV needs no gaming hardware.
-    #
-    # Sunshine + Moonlight rather than Steam Link, because Steam Link only
-    # streams Steam, the dedicated hardware is discontinued, and Moonlight has
-    # clients for far more targets. Sunshine streams anything — emulators,
-    # GOG, a browser, a whole desktop.
+    # Your TV also has Steam Link, which needs neither — Steam Remote Play is
+    # on by default below and works the moment Steam is running. Start there;
+    # add Sunshine when you want to stream things that aren't Steam games
+    # (emulators, the desktop, GOG).
     #
     # TWO CATCHES, and the second one applies to you:
     #
@@ -86,11 +87,39 @@ in
 
     programs.steam = {
       enable = true;
-      gamescopeSession.enable = true; # the session Sunshine will capture
-      remotePlay.openFirewall = false; # Moonlight is doing this job
+      gamescopeSession.enable = true;
+
+      # Your TV has the Steam Link app, and Steam Remote Play is the
+      # zero-configuration way to use it — no Sunshine, no dummy plug, works
+      # the moment Steam is running. Worth having on as the easy path even if
+      # you also set up Sunshine for everything else.
+      remotePlay.openFirewall = true;
       dedicatedServer.openFirewall = false;
-      extraCompatPackages = [ pkgs.proton-ge-bin ]; # better compat than stock Proton
+
+      # Proton-GE: community build with media codecs and fixes that ship
+      # ahead of Valve's. Select it per-game under Properties > Compatibility.
+      extraCompatPackages = [ pkgs.proton-ge-bin ];
     };
+
+    environment.systemPackages = with pkgs;
+      [
+        # Useful alongside Steam regardless of streaming.
+        protonup-qt # manage Proton-GE versions
+        mangohud # in-game FPS/temp overlay
+        lutris # non-Steam games, GOG, emulator frontends
+        heroic # Epic and GOG launcher
+        gamescope
+      ]
+      ++ lib.optionals cfg.emulation [
+        retroarchFull # every core, saves fighting core installation
+        es-de # the frontend that makes it TV-navigable
+        dolphin-emu # GameCube/Wii — better standalone than as a core
+        pcsx2 # PS2
+        rpcs3 # PS3
+        ryujinx # Switch
+        mgba
+        duckstation
+      ];
 
     programs.gamemode.enable = true; # CPU governor + priority while playing
     hardware.steam-hardware.enable = true; # controller udev rules
@@ -112,7 +141,7 @@ in
     #
     # Buy the dummy plug.
     #########################################################################
-    services.sunshine = {
+    services.sunshine = lib.mkIf cfg.streaming {
       enable = true;
       autoStart = true;
       capSysAdmin = true; # required for KMS capture on Wayland
@@ -152,8 +181,8 @@ in
     };
 
     # THE ONE DELIBERATE FIREWALL HOLE IN THIS CONFIG.
-    # Scoped to Sunshine's ports only, and only when lanStreaming is on.
-    networking.firewall = lib.mkIf cfg.lanStreaming {
+    # Scoped to Sunshine's ports only, and only when streaming is actually on.
+    networking.firewall = lib.mkIf (cfg.streaming && cfg.lanStreaming) {
       allowedTCPPorts = sunshineTCP;
       allowedUDPPorts = sunshineUDP;
     };
@@ -175,17 +204,6 @@ in
     # dumping your own cartridges and discs is legal in some jurisdictions and
     # not others. Your call, not mine — just know the ground you're on.
     #########################################################################
-    environment.systemPackages = lib.mkIf cfg.emulation (with pkgs; [
-      retroarchFull # every core, saves fighting core installation
-      es-de # the frontend that makes it TV-navigable
-      dolphin-emu # GameCube/Wii — better standalone than as a core
-      pcsx2 # PS2
-      rpcs3 # PS3
-      ryujinx # Switch
-      mgba
-      duckstation
-    ]);
-
     systemd.tmpfiles.rules =
       lib.optionals (cfg.emulation || cfg.romm) [
         "d ${data}/games      0775 root users -"
@@ -232,9 +250,11 @@ in
       };
     };
 
-    homelab.proxy.routes = {
-      sunshine = "127.0.0.1:47990"; # config web UI
-    } // lib.optionalAttrs cfg.romm {
+    homelab.proxy.routes =
+      (lib.optionalAttrs cfg.streaming {
+        sunshine = "127.0.0.1:47990"; # config web UI
+      })
+      // lib.optionalAttrs cfg.romm {
       roms = "127.0.0.1:8097";
     };
 

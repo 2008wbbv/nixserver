@@ -20,9 +20,18 @@
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
 
     nixos-hardware.url = "github:NixOS/nixos-hardware";
+
+    # Helium browser is not in nixpkgs — the packaging PR has been open a
+    # while and upstream only ships .deb releases. This community flake wraps
+    # them. It updates on its maintainer's schedule, not nixpkgs's, so keep
+    # Firefox as the browser you actually depend on.
+    helium = {
+      url = "github:oxcl/nix-flake-helium-browser";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, sops-nix, disko, vpn-confinement, ... }:
+  outputs = inputs@{ self, nixpkgs, nixpkgs-unstable, sops-nix, disko, vpn-confinement, ... }:
     let
       system = "x86_64-linux";
 
@@ -37,7 +46,7 @@
     {
       nixosConfigurations.vault = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit inputs; } // { inputs = { inherit nixpkgs nixpkgs-unstable sops-nix disko vpn-confinement; }; };
+        specialArgs = { inherit inputs; };
         modules = [
           { nixpkgs.overlays = [ overlayUnstable ]; }
           sops-nix.nixosModules.sops

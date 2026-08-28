@@ -104,6 +104,20 @@
     autoLogin = false;
   };
 
+  # Firefox, Chrome (for DRM), Cider (Apple Music), OrcaSlicer, PrismLauncher,
+  # and the usual desktop set. See modules/profiles/apps.nix.
+  homelab.apps = {
+    enable = true;
+    helium = false; # community flake, not nixpkgs — read the note first
+  };
+
+  homelab.yubikey = {
+    enable = true;
+    # PAM lockout risk. Register two keys and keep a root shell open when you
+    # first turn this on. Read the module.
+    sudoUnlock = false;
+  };
+
   # --- Tier 3b: landchad-flavoured selfhosting --------------------------------
   homelab.selfhost = {
     forgejo = false; # git hosting — worth it just to own this repo
@@ -122,7 +136,8 @@
   # NOTE: this does NOT replace the Windows dual-boot for you — PC Game Pass
   # doesn't run on Linux at all. See docs/GAMING-ARCHITECTURE.md.
   homelab.gaming = {
-    enable = false;
+    enable = true; # Steam + Proton + gamescope, playing at the machine
+    streaming = false; # Sunshine — needs a dummy HDMI plug
     lanStreaming = true; # the one deliberate firewall hole in this config
     emulation = false; # RetroArch + ES-DE + standalone emulators
     romm = false; # browser-playable ROM library (the only container here)

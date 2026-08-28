@@ -10,6 +10,8 @@
     ./profiles/storage.nix
     ./profiles/desktop.nix
     ./profiles/resilience.nix
+    ./profiles/apps.nix
+    ./profiles/yubikey.nix
 
     ./services/tailscale.nix
     ./services/dns.nix
