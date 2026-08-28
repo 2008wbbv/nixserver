@@ -15,6 +15,32 @@ in
     emulation = lib.mkEnableOption "RetroArch, ES-DE, and standalone emulators";
     romm = lib.mkEnableOption "RomM — web ROM library with EmulatorJS (the only container here)";
 
+    roblox = lib.mkEnableOption ''
+      Roblox via Sober.
+
+      Native Roblox does NOT run on Linux and this is deliberate: Roblox's
+      Hyperion (Byfron) anti-cheat has actively blocked Wine and Proton since
+      February 2024. There is no Proton tweak, no launch option, no Proton-GE
+      build that fixes it — the client detects the compatibility layer and
+      refuses.
+
+      Sober is the working answer. It runs Roblox's *Android* build in a
+      compatibility layer, which sidesteps Hyperion entirely because the mobile
+      client uses different protections. It's from the VinegarHQ team and is
+      the path the Linux Roblox community actually uses.
+
+      Two consequences worth knowing:
+        - It's the mobile client, so you can only join experiences that allow
+          cross-platform/mobile play. PC-exclusive ones won't appear.
+        - It is Flatpak-only — there is no nixpkgs package. Enabling this turns
+          on Flatpak, which is otherwise not used anywhere in this config.
+
+      After the first rebuild:
+          flatpak install flathub org.vinegarhq.Sober
+
+      Your 12700KF meets the SSE4.2 requirement easily.
+    '';
+
     lanStreaming = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -105,6 +131,16 @@ in
     networking.firewall = lib.mkIf (cfg.streaming && cfg.lanStreaming) {
       allowedTCPPorts = sunshineTCP;
       allowedUDPPorts = sunshineUDP;
+    };
+
+    # Roblox/Sober is Flatpak-only. This is the only Flatpak in the config, so
+    # it's off unless you ask for it.
+    services.flatpak.enable = lib.mkIf cfg.roblox true;
+    xdg.portal = lib.mkIf cfg.roblox {
+      enable = true;
+      # GNOME provides its own portal; this is the fallback for other setups.
+      extraPortals = lib.mkIf (config.homelab.desktop.environment != "gnome")
+        [ pkgs.xdg-desktop-portal-gtk ];
     };
 
     virtualisation.podman = lib.mkIf cfg.romm {

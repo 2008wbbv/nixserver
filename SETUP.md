@@ -269,6 +269,11 @@ every secret in the repo.
 Turn these on **one at a time**, rebuilding after each. If something breaks you
 want to know which flag did it.
 
+**Each one has a first-run step that can't be declared in Nix** — an admin
+account, a library path, an API key. Those are in
+[docs/CONFIGURE.md](docs/CONFIGURE.md); read the relevant section after each
+service comes up.
+
 ```nix
 homelab.storage.enable = true;      # read modules/profiles/storage.nix first
 homelab.backups.enable = true;      # set a restic target before enabling

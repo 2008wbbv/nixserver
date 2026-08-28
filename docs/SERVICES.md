@@ -7,6 +7,9 @@ sitting at the machine).
 All service URLs are `https://<name>.lab.internal`, reachable **only from the
 tailnet**. Nothing is exposed to the internet or even to your LAN.
 
+This page is *what exists*. For *how to set each one up* after it starts, see
+[CONFIGURE.md](CONFIGURE.md).
+
 ---
 
 ## Services
@@ -78,6 +81,7 @@ Enabled via `homelab.apps.enable`.
 | Firefox | **firefox** | |
 | — | **google-chrome** | Added deliberately: it bundles **Widevine**, which plain Chromium in nixpkgs doesn't. You need it for Apple Music's web player, Netflix, and Xbox Cloud Gaming. |
 | Steam | **steam + Proton-GE** | Plus `protonup-qt`, `mangohud`, `gamescope`, `lutris`, `heroic`. Steam Remote Play is on, so your TV's Steam Link app works immediately with no Sunshine setup. |
+| Roblox | **Sober** (Flatpak) | Native Roblox is **permanently blocked on Linux** — Hyperion/Byfron anti-cheat has detected and refused Wine/Proton since Feb 2024, and no Proton build fixes it. Sober runs the *Android* client instead, which sidesteps it. Only joins experiences that allow mobile/cross-platform play. The one Flatpak in this config. |
 | Elegoo slicer | **orca-slicer** | ElegooSlicer isn't packaged. It's a *fork of OrcaSlicer*, which already ships Elegoo printer profiles — so this is the same program a generation upstream. If you need Elegoo's specific fork, `programs.appimage` is enabled: download their AppImage and run it directly. |
 | Minecraft | **prismlauncher** | Microsoft accounts, instances, Fabric/Forge/NeoForge, one-click Modrinth and CurseForge modpacks. The maintained MultiMC/PolyMC continuation. |
 | YubiKey | **full stack** | See below. |

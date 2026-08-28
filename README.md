@@ -3,7 +3,9 @@
 One desktop PC, converted into a self-hosted server. Reachable over Tailscale
 and nothing else.
 
-**→ [SETUP.md](SETUP.md) is the step-by-step walkthrough. Start there.**
+**→ [SETUP.md](SETUP.md)** — installing, step by step. Start there.
+**→ [docs/CONFIGURE.md](docs/CONFIGURE.md)** — setting up each service once it's
+running.
 
 **Status: scaffold.** None of this has been built or evaluated — there is no
 Nix toolchain in the environment it was written in. Expect to fix option names
@@ -43,6 +45,7 @@ docs/
   GAMING-ARCHITECTURE.md     server + PC + Game Pass on one box
   MIGRATING-FROM-WINDOWS.md  exporting your program list, nixpkgs equivalents
   SERVICES.md                every service and app, what it is, what port
+  CONFIGURE.md               per-service first-run setup — read after each build
 justfile                     `just` — every command you'll need
 scripts/
   bootstrap.sh                 automates the install; run from the installer

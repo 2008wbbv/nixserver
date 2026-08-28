@@ -164,5 +164,11 @@
     lanStreaming = true; # the one deliberate firewall hole in this config
     emulation = false; # RetroArch + ES-DE + standalone emulators
     romm = false; # browser-playable ROM library (the only container here)
+
+    # Roblox. Native is blocked by Hyperion anti-cheat on any Wine/Proton
+    # setup — Sober runs the Android build instead. Flatpak-only, so this is
+    # the one Flatpak in the config. After rebuilding:
+    #   flatpak install flathub org.vinegarhq.Sober
+    roblox = true;
   };
 }
