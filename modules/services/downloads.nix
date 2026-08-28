@@ -9,25 +9,13 @@ in
     lib.mkEnableOption "torrent client, confined to a VPN network namespace";
 
   config = lib.mkIf cfg.enable {
-    #########################################################################
-    # Kill-switch by construction, not by firewall rule.
+    # Kill-switch by construction: the client runs in a network namespace whose
+    # only route is the WireGuard tunnel. If the tunnel drops there is no
+    # default route, so there is no leak path to misconfigure.
     #
-    # The torrent client runs inside a network namespace whose only route is
-    # the WireGuard tunnel. If the tunnel drops, the namespace has no default
-    # route and the client's packets go nowhere. There is no leak path to
-    # misconfigure, because the interface it would leak over does not exist
-    # inside the namespace.
-    #
-    # This is the part of your original plan I'd change most: you had torrent
-    # traffic and Tor in the same bucket. They are opposites.
-    #   - Tor: never torrent over it. The tracker announce carries your real IP
-    #     regardless of the SOCKS proxy, the traffic volume is hostile to the
-    #     network, and exit operators get the abuse complaints.
-    #   - I2P: torrenting is a first-class use case (see anonymity.nix).
-    #     Slow, but it is the design intent rather than an abuse of it.
-    #   - Commercial VPN: what this module is for. Fast, and the right tool
-    #     for public trackers.
-    #########################################################################
+    # Never route torrents over Tor — the tracker announce carries your real IP
+    # regardless of the SOCKS proxy, and exit operators get the abuse reports.
+    # I2P (anonymity.nix) is where anonymous torrenting belongs.
 
     vpnNamespaces.wg = {
       enable = true;

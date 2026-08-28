@@ -74,6 +74,7 @@ in
     rsync
     sops
     age
+    just
   ];
 
   # Disk health matters more than usual when there is exactly one box.

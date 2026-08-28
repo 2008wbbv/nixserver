@@ -105,32 +105,18 @@ in
   options.homelab.anonymity.enable = lib.mkEnableOption "Tor (toggleable routing) + I2P";
 
   config = lib.mkIf cfg.enable {
-    #########################################################################
-    # Tor
+    # Three ways to use Tor, increasing coverage:
+    #   1. SOCKS proxy on 127.0.0.1:9050 — point one app at it.
+    #   2. `torsocks <cmd>` — one process.
+    #   3. `tor-route on` — transparent routing for the `torified` group.
     #
-    # Three ways to use it, in increasing order of coverage:
+    # Group-scoped rather than whole-host on purpose: this box is headless and
+    # reached over Tailscale, and whole-host redirection is how people lock
+    # themselves out. Opt processes in:
+    #     sg torified -c 'maigret someusername'
     #
-    #   1. SOCKS proxy on 127.0.0.1:9050. Point an individual app at it.
-    #      Always available, affects nothing else.
-    #   2. `torsocks <command>` — LD_PRELOAD shim for one process.
-    #   3. `tor-route on` — transparent routing for anything running as a
-    #      member of the `torified` group. This is the toggle you asked for.
-    #
-    # Why group-scoped rather than whole-host: this box is headless and you
-    # reach it over Tailscale. Whole-host transparent routing on a remote
-    # machine is how people lock themselves out. Scoping to a group means the
-    # toggle is always safe to flip, and you opt processes in by running them
-    # as that group.
-    #
-    #   sudo -u ben -g torified firefox
-    #   sg torified -c 'sherlock someusername'
-    #
-    # Not an exit node, and don't make it one — exit traffic points abuse
-    # complaints and law enforcement at your home line, which is the exact
-    # opposite of what the rest of this config is for. A middle relay or
-    # bridge is a real contribution with none of that; flip `relay` if you
-    # want to help.
-    #########################################################################
+    # Not an exit node. Exit traffic points abuse complaints at your home line.
+
     services.tor = {
       enable = true;
       client = {
@@ -175,13 +161,12 @@ in
       wantedBy = [ ];
     };
 
-    #########################################################################
-    # I2P (i2pd — the C++ daemon, far lighter than the Java implementation)
+    # I2P: separate network, not a Tor alternative. Anonymous torrenting is the
+    # design intent here, unlike Tor where it's abuse.
     #
-    # Separate network, not a Tor alternative. This is where anonymous
-    # torrenting belongs — it's the design intent there, unlike Tor, where
-    # it's abuse.
-    #########################################################################
+    # `share` costs you real power — you're relaying 24/7. Lower it if that
+    # matters more than contributing back.
+
     services.i2pd = {
       enable = true;
       proto = {

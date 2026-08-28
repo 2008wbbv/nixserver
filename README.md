@@ -33,7 +33,7 @@ hosts/vault/
 modules/
   options.nix                shared settings (domain, dataDir, admin)
   profiles/                  base, hardening, amdgpu, storage, desktop,
-                             resilience, apps, yubikey, power
+                             resilience, apps, yubikey, power, shell
   services/                  one file per capability, each `homelab.<x>.enable`
 secrets/README.md            how to set up sops
 docs/
@@ -41,7 +41,9 @@ docs/
   GAMING-ARCHITECTURE.md     server + PC + Game Pass on one box
   MIGRATING-FROM-WINDOWS.md  exporting your program list, nixpkgs equivalents
   SERVICES.md                every service and app, what it is, what port
+justfile                     `just` — every command you'll need
 scripts/
+  bootstrap.sh                 automates the install; run from the installer
   disk-report.ps1              what's eating your disks, and what to delete
   export-windows-programs.ps1  run this in Windows first
   match-nixpkgs.sh             then this against the CSV it produces
@@ -92,21 +94,18 @@ Steam Link).
 
 ## Deploying
 
-Single box, so build on the box:
-
 ```
-sudo nixos-rebuild switch --flake .#vault
-```
-
-Safer, for anything that might break networking — reverts automatically if you
-don't confirm within the timeout:
-
-```
-sudo nixos-rebuild test --flake .#vault
+just switch     # rebuild and activate
+just test       # activate, but auto-revert if you don't confirm
+just build      # build only — fast iteration on errors
+just trace      # with --show-trace
+just status     # what's running, what failed
+just logs jellyfin
+just gc         # reclaim disk
 ```
 
-Rollback is a reboot and a different boot menu entry. That safety net is the
-main reason to run NixOS for this rather than Debian and a pile of containers.
+`just` on its own lists the rest. Rollback is a reboot and a different boot
+menu entry — that safety net is the main reason to run NixOS for this.
 
 ## Deliberate choices worth knowing about
 

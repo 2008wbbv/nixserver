@@ -13,6 +13,7 @@
     ./profiles/apps.nix
     ./profiles/yubikey.nix
     ./profiles/power.nix
+    ./profiles/shell.nix
 
     ./services/tailscale.nix
     ./services/dns.nix

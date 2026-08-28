@@ -56,12 +56,12 @@
 
   # --- Tier 2: storage + the things you'll use daily ------------------------
   homelab.storage.enable = false; # TODO: ZFS pool. Read the file first.
-  homelab.files.enable = false; # Samba + Syncthing
+  homelab.files.enable = true; # Samba + Syncthing
   homelab.vaultwarden.enable = false; # password manager
-  homelab.knowledge.enable = false; # SearXNG + FreshRSS + Kiwix + books
+  homelab.knowledge.enable = true; # SearXNG + FreshRSS + Kiwix + books
 
   homelab.media = {
-    enable = false; # Jellyfin + Audiobookshelf
+    enable = true; # Jellyfin + Audiobookshelf
     # Jellyfin does handle music. Leave this off unless its mobile music
     # clients annoy you — that's the specific thing Navidrome fixes.
     navidrome = false;

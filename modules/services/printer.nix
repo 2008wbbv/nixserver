@@ -7,23 +7,12 @@ in
     lib.mkEnableOption "Klipper + Moonraker + Mainsail, printer attached over USB";
 
   config = lib.mkIf cfg.enable {
-    #########################################################################
-    # "3d printer air gapped" — this got *easier* without a router, not harder.
+    # Air-gapped by architecture, not by VLAN: Klipper's mainboard speaks serial
+    # over USB and has no network interface in play at all.
     #
-    # You were going to put the printer on an isolated VLAN. But a VLAN'd
-    # printer still has a NIC, still runs a vendor firmware you can't audit,
-    # and still has a route to something. Klipper's architecture removes the
-    # question entirely: the printer's mainboard speaks serial over USB to this
-    # host, and has no network interface in play at all.
-    #
-    # That is a real air gap for the printer, enforced by physics rather than
-    # by a switch config. The web UI you interact with lives here, on the
-    # tailnet, where you already have access control.
-    #
-    # If your printer is a network-connected appliance (Bambu, most Prusa
-    # Connect setups) this doesn't apply — those need the VLAN treatment, and
-    # that has to wait for the switch.
-    #########################################################################
+    # The klipper *user* is also blocked from reaching the internet by the
+    # nftables rule below — no telemetry, no update checks. Inbound from the
+    # tailnet still works. Most "isolated printer" setups skip that half.
 
     services.klipper = {
       enable = true;
@@ -82,25 +71,6 @@ in
       };
     };
 
-    #########################################################################
-    # "Connected to Klipper, but not connected to the internet."
-    #
-    # Two separate things, and both are handled:
-    #
-    #   The printer itself has no network interface in play at all. Klipper
-    #   splits the stack — the mainboard speaks serial over USB to this host.
-    #   That's an air gap enforced by physics, not by a firewall rule.
-    #
-    #   The Klipper/Moonraker *services* on this host are blocked from
-    #   reaching the internet by the rule below. They can still be reached
-    #   from the tailnet (inbound is unaffected), and they can still talk to
-    #   each other over loopback. They just cannot originate a connection to
-    #   anything outside the LAN — no telemetry, no update checks, no
-    #   fetching from GitHub if a config option gets flipped by accident.
-    #
-    # This is the part most "isolated printer" setups skip: they isolate the
-    # printer and then leave the host software free to phone out.
-    #########################################################################
     networking.nftables.tables.klipper-egress = {
       family = "inet";
       content = ''

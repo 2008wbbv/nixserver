@@ -153,54 +153,31 @@ mkdir -p /mnt/boot
 mount /dev/disk/by-id/<disk1>-partN /mnt/boot
 ```
 
-### 1.7 — Get this repo and generate hardware config
+### 1.7 — Run the bootstrap script
 
 ```bash
 nix-shell -p git
-git clone https://github.com/2008wbbv/nixserver /mnt/etc/nixos
-cd /mnt/etc/nixos
+git clone https://github.com/2008wbbv/nixserver /tmp/nixserver
+cd /tmp/nixserver
 git checkout claude/nix-server-config-lfykkt
 
-nixos-generate-config --root /mnt
-cp /mnt/etc/nixos/hardware-configuration.nix hosts/vault/hardware-configuration.nix
+sudo bash scripts/bootstrap.sh
 ```
 
-That last line replaces the placeholder, which is currently failing the build
-**on purpose** so you can't accidentally install without it.
+It checks your mounts, generates the hardware config and drops it into place,
+generates a `hostId`, prompts for your username / SSH key / timezone, copies
+everything to `/mnt/etc/nixos`, and runs the install. It stops and asks before
+anything irreversible.
 
-### 1.8 — Fill in the three required values
+If you'd rather do it by hand, the script is short and readable — every step is
+a command you can run yourself.
 
-```bash
-nano hosts/vault/default.nix
-```
+**The install will probably fail the first time.** The config has never been
+evaluated. See *When the build fails* at the bottom; it's almost always a
+renamed option and the error names the line. Fix it in `/mnt/etc/nixos` and
+re-run `nixos-install --flake /mnt/etc/nixos#vault`.
 
-| Line | What |
-|---|---|
-| `networking.hostId` | run `head -c4 /dev/urandom \| od -A none -t x4` and paste the result |
-| `homelab.admin.name` | your username |
-| `homelab.admin.sshKeys` | your SSH **public** key — the build refuses without it, since password login is off |
-
-If you don't have an SSH key on your laptop yet: `ssh-keygen -t ed25519`, then
-the public half is in `~/.ssh/id_ed25519.pub`.
-
-Also confirm `time.timeZone` in `modules/profiles/base.nix` is right.
-
-### 1.9 — Install
-
-```bash
-nixos-install --flake /mnt/etc/nixos#vault
-```
-
-**This will probably fail the first time.** The config has never been evaluated
-— there's no Nix in the environment it was written in. See *When the build
-fails* at the bottom; it's almost always a renamed option, and the error tells
-you which line.
-
-Set a root password when prompted, then:
-
-```bash
-reboot
-```
+Set a root password when prompted, then `reboot`.
 
 > ✅ **Checkpoint:** boot menu shows both NixOS and Windows, NixOS boots to a
 > GNOME login screen, and you can log in.
@@ -242,7 +219,7 @@ survives this box being in Windows.
 actual tailnet IP so `*.lab.internal` resolves for other devices, then:
 
 ```bash
-sudo nixos-rebuild switch --flake /etc/nixos#vault
+cd /etc/nixos && just switch
 ```
 
 ### 2.4 — Check it works
@@ -348,11 +325,14 @@ nixos-option services.foo.bar
 man configuration.nix          # searchable, authoritative for your version
 
 # Build without switching, to iterate fast
-sudo nixos-rebuild build --flake /etc/nixos#vault
+just build
 
 # More detail on what blew up
-sudo nixos-rebuild switch --flake /etc/nixos#vault --show-trace
+just trace
 ```
+
+`just` on its own lists every shortcut — `switch`, `test`, `status`, `logs`,
+`failed`, `gc`, `check-vpn`, `check-tor`, `check-boot`.
 
 **If nixpkgs 26.05 doesn't resolve**, edit `flake.nix` to use `nixos-25.11`.
 

@@ -6,32 +6,19 @@ in
   options.homelab.osint.enable = lib.mkEnableOption "OSINT tooling (SpiderFoot + CLI tools)";
 
   config = lib.mkIf cfg.enable {
-    #########################################################################
-    # Practical people-OSINT, i.e. the tools that are actually used rather
-    # than the ones that look impressive in a screenshot.
-    #
-    # Two operational notes that matter more than the tool list:
-    #
-    # 1. These tools work by querying hundreds of third-party services. Every
-    #    query is attributable to whatever IP made it. Run them as the
-    #    `torified` group (see anonymity.nix) so that's a Tor exit and not
-    #    your home connection:
-    #
-    #        tor-route on
-    #        sg torified -c 'maigret someusername'
-    #
-    #    Note the tradeoff: many sites rate-limit or outright block Tor exits,
-    #    so some modules will fail. The VPN namespace is the middle ground.
-    #
-    # 2. Results are unverified by construction — these aggregate public
-    #    sources including stale and wrong ones. Username collisions across
-    #    platforms are extremely common and are the single biggest source of
-    #    false positives. Treat output as leads to confirm, not findings.
-    #########################################################################
+    # Two things matter more than the tool list:
+    #   1. Every query is attributable to the IP that made it. Run these as the
+    #      `torified` group (anonymity.nix) so that's a Tor exit, not your
+    #      house. Caveat: many sites block Tor exits, so the VPN namespace is
+    #      often the better middle ground.
+    #   2. Results are unverified aggregation. Username collisions across
+    #      platforms are the dominant false positive. Leads, not findings.
 
-    # SpiderFoot: the one with a web UI. Automates ~200 modules over a target
-    # (name, email, username, domain, IP) and graphs the relationships. This
-    # is the closest practical thing to the "OSINT map" you described.
+    # SpiderFoot is flagged insecure in nixpkgs (unpatched CVEs in its
+    # dependency tree). Your existing config allowlists it too — without this
+    # the build fails outright rather than warning.
+    nixpkgs.config.permittedInsecurePackages = [ "spiderfoot" ];
+
     services.spiderfoot = {
       enable = true;
       listenAddress = "127.0.0.1";
@@ -69,21 +56,9 @@ in
       python3
     ];
 
-    #########################################################################
-    # Worth knowing about, deliberately not installed:
-    #
-    #   recon-ng      capable framework, but most of its modules need paid API
-    #                 keys to return anything. Sets up an evening of key
-    #                 management for results the tools above give you free.
-    #   phoneinfoga   phone-number OSINT. Coverage outside the US is poor and
-    #                 the useful lookups are all paid.
-    #   Maltego       the commercial standard. Community edition is heavily
-    #                 limited and it isn't self-hostable in any real sense.
-    #
-    # Also: your SearXNG instance (knowledge.nix) has a JSON API. For search
-    # sweeps across many engines at once without hitting any single one hard,
-    # querying it is often more useful than a dedicated tool.
-    #########################################################################
+    # Not installed on purpose: recon-ng (most modules need paid API keys),
+    # phoneinfoga (poor coverage outside the US). Your SearXNG instance has a
+    # JSON API and is often more useful than either for broad sweeps.
 
     # SpiderFoot scans can run for hours and write a lot; keep them off the
     # root filesystem.
