@@ -1,0 +1,29 @@
+# sops-nix key routing.
+#
+# Two kinds of key are involved:
+#   - YOUR age key, so you can edit secrets on your laptop.
+#   - The SERVER's key, derived from its SSH host key, so it can decrypt at
+#     activation time without you typing anything.
+#
+# Get your own key:
+#   mkdir -p ~/.config/sops/age
+#   age-keygen -o ~/.config/sops/age/keys.txt
+#   age-keygen -y ~/.config/sops/age/keys.txt        # <- the public key
+#
+# Get the server's, once it's installed and reachable:
+#   nix shell nixpkgs#ssh-to-age -c \
+#     sh -c 'ssh-keyscan vault | ssh-to-age'
+#
+# Paste both below, then:
+#   sops secrets/secrets.yaml
+
+keys:
+  - &admin age1CHANGEMEcccccccccccccccccccccccccccccccccccccccccccc
+  - &vault age1CHANGEMEsssssssssssssssssssssssssssssssssssssssssssss
+
+creation_rules:
+  - path_regex: secrets/[^/]+\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *vault
