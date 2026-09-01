@@ -83,7 +83,8 @@ in
     }
   ];
 
-  systemd.network.wait-online.anyInterface = true;
+  systemd.network.wait-online.anyInterface =
+    lib.mkIf (config.homelab.desktop.environment == "none") true;
 
   # If the kernel wedges hard enough that systemd stops petting it, the board
   # resets the machine. Your Z690-class board has an Intel TCO watchdog, so
@@ -102,10 +103,14 @@ in
   # Power the box on remotely instead of walking to it. Also enable "Wake on
   # Magic Packet" and "Restore on AC Power Loss" in BIOS.
   #   wakeonlan <mac>
-  systemd.network.links."10-wol" = {
-    matchConfig.Type = "ether";
-    linkConfig.WakeOnLan = "magic";
-  };
+  #
+  # Done with udev + ethtool rather than a systemd .link file, because .link
+  # files are only installed when networkd is enabled — and on a desktop
+  # NetworkManager is managing the interface instead.
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="net", NAME=="en*", \
+      RUN+="${pkgs.ethtool}/bin/ethtool -s $name wol g"
+  '';
 
   environment.systemPackages = [ pkgs.wakeonlan ];
 

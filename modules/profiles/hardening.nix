@@ -18,6 +18,13 @@
 # When you buy a router + managed switch, VLANs become layer 0 and none of this
 # gets thrown away.
 
+let
+  # GNOME/Plasma pull in NetworkManager and enable it themselves. Fighting that
+  # is the wrong call anyway: on a machine you sit at, you want the network
+  # applet, the wifi picker and VPN entries. Headless, networkd is leaner and
+  # fully declarative.
+  desktop = config.homelab.desktop.environment != "none";
+in
 {
   networking = {
     # nftables backend; the legacy iptables one is on its way out.
@@ -41,17 +48,25 @@
       # confusing ways. The netns modules handle egress control where it matters.
     };
 
-    # networkd instead of NetworkManager: declarative, and it won't rewrite
-    # /etc/resolv.conf out from under our own resolver.
-    networkmanager.enable = lib.mkDefault false;
-    useNetworkd = true;
     useDHCP = false;
+    useNetworkd = !desktop;
+
+    networkmanager = lib.mkIf desktop {
+      enable = true;
+      # Don't let it rewrite /etc/resolv.conf — our own resolver owns DNS.
+      # `networking.nameservers` below points the machine at AdGuard instead.
+      dns = "none";
+    };
+
+    # Without this, `dns = "none"` leaves resolv.conf empty and nothing on this
+    # host resolves. Other devices get AdGuard via Tailscale's DNS setting;
+    # this is how the box itself uses it.
+    nameservers = lib.mkIf (desktop && config.homelab.dns.enable) [ "127.0.0.1" ];
   };
 
-  # Catch-all DHCP on wired interfaces. Without this the box has no network at
-  # all once NetworkManager is off — check your NIC name with `ip link` and
-  # narrow the match if this host ever grows a second interface.
-  systemd.network = {
+  # Headless only. NetworkManager does its own DHCP, and running both managers
+  # against the same interface makes them fight.
+  systemd.network = lib.mkIf (!desktop) {
     enable = true;
     networks."10-wired" = {
       matchConfig.Name = "en* eth*";
