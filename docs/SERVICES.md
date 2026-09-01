@@ -53,14 +53,13 @@ This page is *what exists*. For *how to set each one up* after it starts, see
 | **Ollama** | — | 11434 | Local LLM inference. |
 | **Open WebUI** | `chat.` | 8088 | ChatGPT-style frontend for it. |
 | **Maps** | `maps.` | — | Offline OpenStreetMap of your state, served as one file. |
-| **SpiderFoot** | `osint.` | 5001 | Automated OSINT recon with a relationship graph. |
 | **Synapse** | `matrix.` | 8008 | Matrix homeserver, federation off. |
 | **Prosody** | — | 5222 | XMPP server. |
 | **Forgejo** *(off)* | `git.` | 3002 | Self-hosted git — worth it to own this repo. |
 | **Nextcloud** *(off)* | `cloud.` | 8091 | Only for CalDAV/CardDAV; Syncthing beats it for files. |
 | **RomM** *(off)* | `roms.` | 8097 | Browser-playable ROM library. The only container here. |
 | **Sunshine** *(off)* | `sunshine.` | 47989 | Game streaming to the TV's Moonlight client. |
-| **Klipper + Moonraker** *(off)* | `printer.` | 7125 | 3D printer over USB, firewalled off the internet. |
+| **Klipper + Moonraker + Mainsail** *(off)* | `printer.` | 7126 | 3D printer over USB, firewalled off the internet. |
 
 ### Always running, no UI
 

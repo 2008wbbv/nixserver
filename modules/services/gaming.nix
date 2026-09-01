@@ -85,8 +85,10 @@ in
         gamescope
       ]
       ++ lib.optionals cfg.emulation [
+        # NOTE: ES-DE is not in nixpkgs. RetroArch's own UI is gamepad-driven
+        # and works fine on a TV; if you want ES-DE specifically it ships an
+        # AppImage and programs.appimage is available.
         retroarchFull
-        es-de # TV-navigable frontend
         dolphin-emu # GameCube/Wii
         pcsx2 # PS2
         rpcs3 # PS3
@@ -121,8 +123,8 @@ in
             auto-detach = "true";
           }
         ] ++ lib.optional cfg.emulation {
-          name = "EmulationStation";
-          cmd = "${pkgs.es-de}/bin/es-de";
+          name = "RetroArch";
+          cmd = "${pkgs.retroarchFull}/bin/retroarch";
           auto-detach = "true";
         };
       };

@@ -92,15 +92,20 @@ in
       '';
     };
 
+    # mainsail drives nginx itself and proxies /websocket and /printer through
+    # to moonraker, so Caddy must point at mainsail's nginx rather than at
+    # moonraker directly. `nginx` here is an nginx virtualHost submodule, not
+    # an on/off switch.
     services.mainsail = {
       enable = true;
-      # NOTE: verify this option exists on your nixpkgs revision — if not, the
-      # mainsail static files can be served straight from Caddy:
-      #   root * ${pkgs.mainsail}/share/mainsail
-      nginx.enable = false;
+      hostName = "printer.${config.homelab.domain}";
+      nginx.listen = [{
+        addr = "127.0.0.1";
+        port = 7126;
+      }];
     };
 
-    homelab.proxy.routes.printer = "127.0.0.1:7125";
+    homelab.proxy.routes.printer = "127.0.0.1:7126"; # mainsail's nginx
 
     users.users.klipper = {
       isSystemUser = true;

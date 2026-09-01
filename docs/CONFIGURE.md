@@ -268,6 +268,20 @@ enable that under **Profile → API management** first.
 Also worth having: Wiktionary, Project Gutenberg, Stack Exchange, iFixit,
 WikiMed.
 
+**kiwix-serve does not scan a directory** — each file has to be listed. Add
+them in `hosts/vault/default.nix`:
+
+```nix
+homelab.knowledge.zimFiles = {
+  wikipedia  = "/srv/files/zim/wikipedia_en_simple_all_maxi.zim";
+  wiktionary = "/srv/files/zim/wiktionary_en_all_nopic.zim";
+};
+```
+
+The attribute name becomes the URL segment. For a big collection, build a
+`library.xml` with `kiwix-manage` and set `services.kiwix-serve.libraryPath`
+instead.
+
 ## Calibre-Web — `https://library.lab.internal`
 
 Needs an **existing Calibre library** — it reads `metadata.db`, it doesn't
@@ -364,13 +378,14 @@ and you're behind hostile NAT.
 I2P console at `https://i2p.lab.internal`. Give it 10–20 minutes to integrate
 into the network on first start — it looks broken before then and isn't.
 
-## OSINT — `https://osint.lab.internal`
+## OSINT
 
-SpiderFoot needs no setup, but most modules want API keys (**Settings → Module
-Settings**). Free tiers worth adding: Shodan, HaveIBeenPwned, VirusTotal,
-AbuseIPDB.
+**There is no SpiderFoot here.** It has no NixOS module and no nixpkgs package
+on any branch — an earlier version of this repo assumed both and was wrong. If
+you want its web UI, run it in a container or a `uv`/`pipx` venv and add a
+`homelab.proxy.routes` entry by hand.
 
-Run the CLI tools torified so queries aren't attributable to your house:
+The CLI tools cover most of what it's actually used for. Run them torified so queries aren't attributable to your house:
 
 ```bash
 tor-route on

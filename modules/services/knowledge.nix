@@ -5,8 +5,28 @@ let
   data = config.homelab.dataDir;
 in
 {
-  options.homelab.knowledge.enable =
-    lib.mkEnableOption "SearXNG, FreshRSS, Kiwix (offline Wikipedia), Calibre-Web";
+  options.homelab.knowledge = {
+    enable = lib.mkEnableOption "SearXNG, FreshRSS, Kiwix (offline Wikipedia), Calibre-Web";
+
+    zimFiles = lib.mkOption {
+      type = lib.types.attrsOf lib.types.path;
+      default = { };
+      example = {
+        wikipedia = "/srv/files/zim/wikipedia_en_simple_all_maxi.zim";
+        wiktionary = "/srv/files/zim/wiktionary_en_all_nopic.zim";
+      };
+      description = ''
+        ZIM files to serve, as name -> path. The name becomes the URL segment.
+
+        kiwix-serve wants each file listed explicitly; it does not scan a
+        directory. Download from https://download.kiwix.org/zim/ into
+        /srv/files/zim first, then add entries here.
+
+        For a large collection, build a library.xml with `kiwix-manage` and
+        set services.kiwix-serve.libraryPath instead.
+      '';
+    };
+  };
 
   config = lib.mkIf cfg.enable {
     #########################################################################
@@ -87,7 +107,8 @@ in
       enable = true;
       address = "127.0.0.1";
       port = 8081;
-      zimPaths = [ "${data}/files/zim" ]; # TODO: verify option name on your nixpkgs
+      openFirewall = false; # tailnet only, via Caddy
+      library = cfg.zimFiles;
     };
 
     #########################################################################

@@ -14,20 +14,11 @@ in
     #   2. Results are unverified aggregation. Username collisions across
     #      platforms are the dominant false positive. Leads, not findings.
 
-    homelab.stack.groups.osint = [ "spiderfoot" ];
-
-    # SpiderFoot is flagged insecure in nixpkgs (unpatched CVEs in its
-    # dependency tree). Your existing config allowlists it too — without this
-    # the build fails outright rather than warning.
-    nixpkgs.config.permittedInsecurePackages = [ "spiderfoot" ];
-
-    services.spiderfoot = {
-      enable = true;
-      listenAddress = "127.0.0.1";
-      port = 5001;
-    };
-
-    homelab.proxy.routes.osint = "127.0.0.1:5001";
+    # SpiderFoot is NOT in nixpkgs — no NixOS module and no package, on any
+    # branch. (An earlier version of this file assumed both; it was wrong.)
+    # If you want its web UI, run it in a container or a uv/pipx venv and add
+    # a homelab.proxy.routes entry by hand. The CLI tools below cover most of
+    # what people actually use it for.
 
     environment.systemPackages = with pkgs; [
       # --- people / accounts ------------------------------------------------
