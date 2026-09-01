@@ -16,6 +16,27 @@ have to line up first, and **three of them will lock you out if you get them
 wrong**, because `users.mutableUsers = false` makes the config the only source
 of truth for accounts.
 
+### The short version
+
+```bash
+cd ~/Projects/nixserver     # wherever you cloned it
+./scripts/adopt.sh
+```
+
+Run it as **your normal user, not root** — it needs to know who you are.
+
+It copies your existing `hardware-configuration.nix`, takes `stateVersion`
+from your current install, sets the username to match `whoami`, prompts for a
+password hash, picks up your SSH key, generates a `hostId`, reads your
+timezone, and ends with a **build that activates nothing** so you can review.
+
+It's idempotent — safe to re-run after fixing a build error.
+
+**Do not run `bootstrap.sh`.** That one is for the installer ISO and expects
+`/mnt` to be mounted, because it runs before a system exists.
+
+The rest of this section is what the script does, if you'd rather do it by hand.
+
 ### 1B.1 — Collect four facts from the running machine
 
 ```bash

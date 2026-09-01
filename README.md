@@ -50,7 +50,8 @@ docs/
   CONFIGURE.md               per-service first-run setup — read after each build
 justfile                     `just` — every command you'll need
 scripts/
-  bootstrap.sh                 automates the install; run from the installer
+  adopt.sh                     point an EXISTING NixOS install at this config
+  bootstrap.sh                 install from scratch; installer ISO only
   disk-report.ps1              what's eating your disks, and what to delete
   export-windows-programs.ps1  run this in Windows first
   match-nixpkgs.sh             then this against the CSV it produces

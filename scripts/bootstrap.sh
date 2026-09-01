@@ -20,6 +20,30 @@ die()  { printf '\033[31merror: %s\033[0m\n' "$*" >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || die "run as root"
 [ -f "$CFG" ] || die "can't find $CFG — run this from inside the repo"
 
+# This script is for the INSTALLER ISO only. On the ISO the root filesystem is
+# a tmpfs/overlay; on an installed system it's a real filesystem. Checking that
+# is more reliable than checking for /mnt, and it means the error can point
+# somewhere useful instead of telling you to partition a disk you already have.
+ROOTFS=$(findmnt -no FSTYPE / 2>/dev/null || echo unknown)
+case "$ROOTFS" in
+  tmpfs|overlay|squashfs) ;;  # live ISO, carry on
+  *)
+    cat >&2 <<EOF
+
+This is the wrong script for you.
+
+bootstrap.sh installs NixOS from the installer ISO onto empty disks. Your root
+filesystem is $ROOTFS, so NixOS is already installed and running.
+
+You want scripts/adopt.sh instead — it points an existing install at this
+config, keeping your user account and your hardware-configuration.nix:
+
+    ./scripts/adopt.sh
+
+EOF
+    exit 1 ;;
+esac
+
 bold "== checking mounts =="
 mountpoint -q /mnt || die "/mnt is not mounted. Partition and mount first (SETUP.md phase 1.6)."
 mountpoint -q /mnt/boot || die "/mnt/boot is not mounted. That's your 1GB ESP."
