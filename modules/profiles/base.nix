@@ -30,12 +30,16 @@ in
   boot.loader.timeout = lib.mkDefault 10;
   i18n.defaultLocale = "en_US.UTF-8";
 
+  # Declarative users: anything not listed here is REMOVED on rebuild, and
+  # `passwd` changes don't survive. That's the point, but it means the password
+  # has to come from the config too.
   users.mutableUsers = false;
   users.users.${cfg.admin.name} = {
     isNormalUser = true;
     description = "Administrator";
-    extraGroups = [ "wheel" "systemd-journal" ];
+    extraGroups = [ "wheel" "systemd-journal" "networkmanager" ];
     openssh.authorizedKeys.keys = cfg.admin.sshKeys;
+    hashedPassword = cfg.admin.hashedPassword;
   };
   users.users.root.openssh.authorizedKeys.keys = cfg.admin.sshKeys;
 

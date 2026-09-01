@@ -31,11 +31,21 @@
     secrets.enable = false;
 
     # Your admin account.
+    #
+    # This MUST match the account that already exists on the machine.
+    # users.mutableUsers = false means any user not declared here is removed
+    # on the next rebuild — so a mismatch deletes your account.
     admin = {
-      name = "ben";
-      # TODO: paste your SSH public key(s). Password login is disabled.
+      name = "samadams"; # TODO: confirm — from the `whoami` on your box
+
+      # TODO: REQUIRED, or you cannot log in at GDM. `mutableUsers = false`
+      # means `passwd` doesn't survive a rebuild, so the password lives here.
+      #   mkpasswd -m yescrypt
+      hashedPassword = null;
+
+      # TODO: your SSH public key, for getting in over the tailnet.
       sshKeys = [
-        # "ssh-ed25519 AAAA... ben@laptop"
+        # "ssh-ed25519 AAAA... samadams@laptop"
       ];
     };
   };
