@@ -3,7 +3,9 @@
 One desktop PC, converted into a self-hosted server. Reachable over Tailscale
 and nothing else.
 
-**→ [SETUP.md](SETUP.md)** — installing, step by step. Start there.
+**→ [SETUP.md](SETUP.md)** — start here. If NixOS is already installed and
+booting, go straight to **Phase 1B**; phases 0–1 are for installing from
+scratch.
 **→ [docs/CONFIGURE.md](docs/CONFIGURE.md)** — setting up each service once it's
 running.
 
@@ -48,7 +50,8 @@ docs/
   CONFIGURE.md               per-service first-run setup — read after each build
 justfile                     `just` — every command you'll need
 scripts/
-  bootstrap.sh                 automates the install; run from the installer
+  adopt.sh                     point an EXISTING NixOS install at this config
+  bootstrap.sh                 install from scratch; installer ISO only
   disk-report.ps1              what's eating your disks, and what to delete
   export-windows-programs.ps1  run this in Windows first
   match-nixpkgs.sh             then this against the CSV it produces
@@ -62,14 +65,13 @@ meant to read as the inventory of the box.
 Do not try to bring this up all at once. Each tier should be green and
 committed before you start the next.
 
-**Tier 0 — make room, then install.**
-Read [docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md) first: both disks are
-~98% full and nothing else can start until that's solved. It also covers the
-three things to do in Windows *before* touching partitions. While you're still
-booted into Windows, run `scripts/export-windows-programs.ps1` — it's much more
-annoying to get that list afterwards. Then replace
-`hosts/vault/hardware-configuration.nix` with the generated one, set
-`networking.hostId`, add your SSH key.
+**Tier 0 — install, or adopt an existing install.**
+If NixOS is already running, [SETUP.md Phase 1B](SETUP.md) covers pointing it
+at this config — the important part being that `users.mutableUsers = false`
+makes this repo the only source of truth for accounts, so a mismatched
+username deletes yours and a missing `hashedPassword` locks you out of GDM.
+Installing from scratch instead? See
+[docs/INSTALL-DUALBOOT.md](docs/INSTALL-DUALBOOT.md).
 
 **Tier 1 — get on the tailnet.**
 `tailscale`, `dns`, `proxy`, `monitoring`. After this the box is reachable from

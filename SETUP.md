@@ -1,13 +1,131 @@
 # Setup — start here
 
-Six phases. **Do them in order and don't skip ahead** — each one assumes the
-previous is finished. Phases 0–2 are the ones with real risk; after that it's
-just flipping flags.
+**Already have NixOS installed and booting?** Skip to
+[Phase 1B](#phase-1b--applying-this-to-an-already-installed-nixos). Phases 0
+and 1 are for installing from scratch.
 
-Expect the whole thing to take a weekend, most of it waiting on downloads and
-Steam uninstalls.
+Otherwise: six phases, in order. Phases 0–2 carry the real risk; after that
+it's flipping flags.
 
 ---
+
+# Phase 1B — Applying this to an already-installed NixOS
+
+You installed NixOS yourself and want to switch it to this config. Four things
+have to line up first, and **three of them will lock you out if you get them
+wrong**, because `users.mutableUsers = false` makes the config the only source
+of truth for accounts.
+
+### The short version
+
+```bash
+cd ~/Projects/nixserver     # wherever you cloned it
+./scripts/adopt.sh
+```
+
+Run it as **your normal user, not root** — it needs to know who you are.
+
+It copies your existing `hardware-configuration.nix`, takes `stateVersion`
+from your current install, sets the username to match `whoami`, prompts for a
+password hash, picks up your SSH key, generates a `hostId`, reads your
+timezone, and ends with a **build that activates nothing** so you can review.
+
+It's idempotent — safe to re-run after fixing a build error.
+
+**Do not run `bootstrap.sh`.** That one is for the installer ISO and expects
+`/mnt` to be mounted, because it runs before a system exists.
+
+The rest of this section is what the script does, if you'd rather do it by hand.
+
+### 1B.1 — Collect four facts from the running machine
+
+```bash
+whoami                              # your username
+hostnamectl | grep "Static hostname"
+lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT
+cat /etc/nixos/hardware-configuration.nix | head -40
+```
+
+### 1B.2 — Set a password hash
+
+`mutableUsers = false` means `passwd` changes are wiped on every rebuild, so
+the password has to live in the config. Without one you cannot log in at GDM —
+SSH keys don't help when you're sitting at the keyboard.
+
+```bash
+nix-shell -p mkpasswd --run 'mkpasswd -m yescrypt'
+```
+
+Paste the result into `homelab.admin.hashedPassword`. There's an assertion that
+refuses to build without it when a desktop is enabled, so you can't forget.
+
+### 1B.3 — Clone and wire it up
+
+```bash
+nix-shell -p git
+
+sudo mv /etc/nixos /etc/nixos.orig          # keep the old config
+sudo git clone https://github.com/2008wbbv/nixserver /etc/nixos
+cd /etc/nixos
+sudo git checkout claude/nix-server-config-lfykkt
+
+# Your EXISTING hardware config is correct for this machine — use it,
+# don't regenerate it.
+sudo cp /etc/nixos.orig/hardware-configuration.nix \
+        hosts/vault/hardware-configuration.nix
+```
+
+That last step replaces the placeholder, which fails the build on purpose so
+you can't skip it.
+
+### 1B.4 — Edit four values in `hosts/vault/default.nix`
+
+| Value | What |
+|---|---|
+| `homelab.admin.name` | **must match `whoami`** — anything else deletes your account |
+| `homelab.admin.hashedPassword` | from 1B.2 |
+| `homelab.admin.sshKeys` | your public key (`ssh-keygen -t ed25519` if you have none) |
+| `networking.hostId` | `head -c4 /dev/urandom \| od -A none -t x4` |
+
+Check `system.stateVersion` matches what your install used — it's in
+`/etc/nixos.orig/configuration.nix`. **Don't change it to something newer**;
+it's a compatibility marker for the version you installed, not a version to
+keep current.
+
+Also confirm `time.timeZone` in `modules/profiles/base.nix`.
+
+### 1B.5 — Build without switching, first
+
+```bash
+sudo nixos-rebuild build --flake /etc/nixos#vault
+```
+
+This changes nothing. It will very likely fail the first time — the config has
+never been evaluated. The error names the file and line; see *When the build
+fails* at the bottom.
+
+### 1B.6 — Then switch
+
+```bash
+sudo nixos-rebuild switch --flake /etc/nixos#vault
+```
+
+**Before rebooting, verify you can still log in.** Open a second TTY
+(`Ctrl+Alt+F3`) and log in with your username and the new password. If that
+works, you're safe. If it doesn't, you still have your current session — fix
+`hashedPassword` and switch again rather than rebooting into a machine you
+can't get into.
+
+Rollback if needed: reboot and pick the previous generation from the boot menu.
+
+> ✅ **Checkpoint:** `hostname` says `vault`, you can log in at a fresh TTY,
+> and `doctor` runs.
+
+Now continue at **Phase 2**.
+
+---
+
+# Installing from scratch
 
 # Phase 0 — Free up space (Windows)
 
